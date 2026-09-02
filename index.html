@@ -899,7 +899,10 @@
           activos: res.data.items_activos || [],
         };
         contenedor.innerHTML = kpiHelp("Candidatas: publicaciones invitadas a esta campaña que todavía no están aplicadas. Activas: ya están corriendo con el descuento puesto. Se calcula consultando en vivo /seller-promotions/promotions/{id}/items en ML.") +
-          ' Candidatas: <b>' + res.data.candidatos + '</b> · Activas: <b>' + res.data.activos + '</b>';
+          ' Candidatas: <b>' + res.data.candidatos + '</b> · Activas: <b>' + res.data.activos + '</b> ' +
+          '<button class="chico secondary" data-ver-conteo data-promotion-id="' + escapeHtml(promotionId) + '" data-promotion-type="' + escapeHtml(promotionType) + '">🔄 Actualizar</button>';
+        var btnActualizar = contenedor.querySelector("[data-ver-conteo]");
+        if (btnActualizar) btnActualizar.addEventListener("click", function () { cargarConteo(btnActualizar); });
         if (botonesAccion) {
           botonesAccion.classList.remove("oculto");
           var btnSubir = botonesAccion.querySelector('[data-accion="subir"]');
