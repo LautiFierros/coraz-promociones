@@ -1,0 +1,949 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CORAZ · Promociones ML</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  /* ============================================================
+     CONFIG VISUAL — identidad ámbar/oscura CORAZ
+     ============================================================ */
+  :root {
+    --bg: #14110c;
+    --panel: #1e1912;
+    --panel-2: #241d13;
+    --panel-border: #332a1a;
+    --amber: #e8a33d;
+    --amber-dim: #a8762b;
+    --amber-soft: #3a2c15;
+    --text: #f0e9dc;
+    --text-dim: #9c9385;
+    --ok: #6fbf73;
+    --ok-soft: #1c2b1c;
+    --err: #e0645a;
+    --err-soft: #2b1c1c;
+    --info: #6ba3d6;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, "Segoe UI", Roboto, Arial, sans-serif;
+    line-height: 1.5;
+  }
+  .oculto { display: none !important; }
+  #cdnFail {
+    display: none; background: var(--err-soft); border: 1px solid var(--err); border-radius: 8px;
+    padding: 12px 16px; margin: 16px; font-size: 0.85rem;
+  }
+  #cdnFail.show { display: block; }
+
+  /* -------------------- Login gate -------------------- */
+  #gate { min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 24px; }
+  #gate .box { width: 100%; max-width: 340px; }
+  #gate h1 { text-align: center; color: var(--amber); font-size: 1.2rem; margin-bottom: 4px; }
+  #gate .sub { text-align: center; color: var(--text-dim); font-size: 0.8rem; margin-bottom: 24px; }
+
+  /* -------------------- Layout general -------------------- */
+  #app { max-width: 980px; margin: 0 auto; padding: 20px 16px 60px; }
+  header.top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 20px; flex-wrap: wrap; gap: 10px;
+  }
+  header.top h1 { font-size: 1.3rem; color: var(--amber); margin: 0; }
+  header.top .acciones { display: flex; gap: 8px; }
+
+  .panel {
+    background: var(--panel); border: 1px solid var(--panel-border);
+    border-radius: 12px; padding: 18px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; }
+  input, select {
+    padding: 9px 11px; border-radius: 6px;
+    border: 1px solid var(--panel-border); background: #0f0c08; color: var(--text);
+    font-size: 0.88rem;
+  }
+  input:focus, select:focus { outline: none; border-color: var(--amber-dim); }
+
+  button {
+    background: var(--amber); color: #1a1408; border: none; border-radius: 6px;
+    padding: 9px 15px; font-weight: 600; font-size: 0.85rem; cursor: pointer;
+    transition: background .15s;
+  }
+  button:hover { background: #f0b458; }
+  button:disabled { background: var(--panel-border); color: var(--text-dim); cursor: not-allowed; }
+  button.secondary { background: transparent; border: 1px solid var(--amber-dim); color: var(--amber); }
+  button.secondary:hover { background: var(--amber-soft); }
+  button.danger { background: var(--err); color: #2b0f0c; }
+  button.danger:hover { background: #ea7a70; }
+  button.chico { padding: 6px 10px; font-size: 0.78rem; }
+
+  .estado { font-size: 0.82rem; margin-top: 8px; min-height: 1.1em; }
+  .estado.ok { color: var(--ok); }
+  .estado.err { color: var(--err); }
+
+  /* -------------------- Tooltip "?" (premisa KPIs) -------------------- */
+  .kpi-help {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 16px; height: 16px; border-radius: 50%; background: var(--panel-border);
+    color: var(--text-dim); font-size: 10px; font-weight: 700; cursor: pointer;
+    margin-left: 5px; position: relative; flex-shrink: 0; user-select: none;
+  }
+  .kpi-help:hover, .kpi-help.abierto { background: var(--amber-dim); color: #1a1408; }
+  .kpi-help .globo {
+    display: none; position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%);
+    width: 220px; background: #0f0c08; border: 1px solid var(--amber-dim); border-radius: 8px;
+    padding: 10px 12px; font-size: 0.75rem; font-weight: 400; color: var(--text-dim);
+    line-height: 1.4; z-index: 20; text-align: left;
+  }
+  .kpi-help.abierto .globo { display: block; }
+
+  /* -------------------- Hero cards por tipo -------------------- */
+  .grid-tipos { display: grid; grid-template-columns: 1fr; gap: 14px; }
+  @media (min-width: 720px) { .grid-tipos { grid-template-columns: 1fr 1fr; } }
+
+  .hero {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 18px; display: flex; flex-direction: column; gap: 10px;
+  }
+  .hero.controlable { border-color: var(--amber-dim); }
+  .hero-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+  .hero-nombre { font-weight: 700; font-size: 1rem; color: var(--text); }
+  .hero-badge {
+    font-size: 0.68rem; font-weight: 700; padding: 3px 8px; border-radius: 20px;
+    background: var(--panel-border); color: var(--text-dim); white-space: nowrap;
+  }
+  .hero-badge.controlable { background: var(--amber-soft); color: var(--amber); }
+  .hero-explicacion { font-size: 0.82rem; color: var(--text-dim); }
+
+  .instancias { display: flex; flex-direction: column; gap: 8px; margin-top: 4px; }
+  .instancia {
+    background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 10px;
+    padding: 10px 12px; font-size: 0.8rem;
+  }
+  .instancia .nombre { font-weight: 600; color: var(--text); }
+  .instancia .fechas { color: var(--text-dim); font-size: 0.72rem; margin-top: 2px; }
+  .instancia .estado-badge {
+    display: inline-block; font-size: 0.68rem; font-weight: 700; padding: 2px 7px;
+    border-radius: 20px; margin-left: 6px; vertical-align: middle;
+  }
+  .instancia .estado-badge.started { background: var(--ok-soft); color: var(--ok); }
+  .instancia .estado-badge.pending { background: var(--amber-soft); color: var(--amber); }
+
+  .instancia-acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
+  .conteo-preview { font-size: 0.75rem; color: var(--text-dim); }
+  .sin-instancias { font-size: 0.78rem; color: var(--text-dim); font-style: italic; }
+  .proximamente { font-size: 0.72rem; color: var(--text-dim); font-style: italic; margin-top: 4px; }
+
+  /* -------------------- Modal -------------------- */
+  .modal-fondo {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.6); display: flex;
+    align-items: center; justify-content: center; padding: 20px; z-index: 100;
+  }
+  .modal-fondo.oculto { display: none !important; }
+  .modal-caja {
+    background: var(--panel); border: 1px solid var(--panel-border); border-radius: 14px;
+    padding: 22px; max-width: 560px; width: 100%; max-height: 85vh; overflow-y: auto;
+  }
+  .modal-caja h2 { color: var(--amber); font-size: 1.1rem; margin-top: 0; }
+  .modal-caja h3 { color: var(--text); font-size: 0.95rem; margin: 14px 0 6px; }
+  .modal-caja p { font-size: 0.85rem; color: var(--text-dim); }
+  .modal-cerrar { display: flex; justify-content: flex-end; margin-top: 16px; }
+
+  table.log { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 10px; }
+  table.log th, table.log td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
+  table.log th { color: var(--text-dim); font-weight: 600; }
+  .tag-log { font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
+  .tag-log.APLICADO, .tag-log.REMOVIDO { background: var(--ok-soft); color: var(--ok); }
+  .tag-log.ERROR { background: var(--err-soft); color: var(--err); }
+
+  /* -------------------- Config de % por SKU -------------------- */
+  .fila-sku { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--panel-border); font-size: 0.82rem; }
+  .fila-sku .sku { flex: 1; }
+  .fila-sku input[type="number"] { width: 70px; }
+  .form-sku { display: flex; gap: 8px; flex-wrap: wrap; align-items: flex-end; margin-top: 12px; }
+  .form-sku > div { display: flex; flex-direction: column; }
+
+  /* -------------------- Métricas de las ofertas -------------------- */
+  .metricas-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+  @media (min-width: 560px) { .metricas-grid { grid-template-columns: repeat(4, 1fr); } }
+  .stat-box {
+    background: var(--panel-2); border: 1px solid var(--panel-border); border-radius: 10px;
+    padding: 12px 10px; text-align: center;
+  }
+  .stat-box .valor { font-size: 1.5rem; font-weight: 700; color: var(--amber); line-height: 1.1; }
+  .stat-box .valor.dim { color: var(--text-dim); }
+  .stat-box .etiqueta { font-size: 0.7rem; color: var(--text-dim); margin-top: 4px; }
+  .tipo-fila {
+    display: flex; justify-content: space-between; align-items: center;
+    font-size: 0.8rem; padding: 6px 0; border-bottom: 1px solid var(--panel-border);
+  }
+  .tipo-fila:last-child { border-bottom: none; }
+  .tipo-fila .cant { color: var(--amber); font-weight: 700; }
+</style>
+</head>
+<body>
+
+<div id="cdnFail">No cargó supabase-js desde el CDN. Revisá tu conexión y recargá la página.</div>
+
+<!-- ============================================================
+     LOGIN
+     ============================================================ -->
+<div id="gate">
+  <div class="box panel">
+    <h1>🏷️ CORAZ · Promociones ML</h1>
+    <div class="sub">Iniciá sesión para continuar</div>
+    <label for="gateEmail">Email</label>
+    <input type="email" id="gateEmail" style="width:100%; margin-bottom:12px;" autocomplete="username" inputmode="email">
+    <label for="gatePass">Contraseña</label>
+    <input type="password" id="gatePass" style="width:100%; margin-bottom:14px;" autocomplete="current-password">
+    <button id="gateBtn" style="width:100%;">Ingresar</button>
+    <div id="gateError" class="estado err"></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     APP
+     ============================================================ -->
+<div id="app" class="oculto">
+  <header class="top">
+    <h1>🏷️ Promociones ML — CORAZ</h1>
+    <div class="acciones">
+      <button class="secondary chico" id="btnFuncionamiento">¿Cómo funciona?</button>
+      <button class="secondary chico" id="btnLogout">Salir</button>
+    </div>
+  </header>
+
+  <!-- Config de % por SKU -->
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" id="toggleConfig">
+      <label style="margin:0; color:var(--amber); font-weight:600;">⚙️ % de descuento por SKU</label>
+      <span id="toggleConfigIcono" style="color:var(--text-dim);">▸</span>
+    </div>
+    <div id="configBody" class="oculto" style="margin-top:12px;">
+      <p style="font-size:0.8rem; color:var(--text-dim); margin-top:0;">
+        Cuando apretás "Subir a todas", cada SKU usa el % que definas acá. Los SKU sin fila propia usan el default.
+      </p>
+
+      <div class="fila-sku" style="font-weight:600;">
+        <span class="sku">Default (todo SKU sin % propio)</span>
+        <input type="number" id="inputDefault" min="1" max="99" step="1">
+        <span>%</span>
+        <button class="chico" id="btnGuardarDefault">Guardar</button>
+      </div>
+
+      <div id="listaSkus"></div>
+
+      <div class="form-sku">
+        <div>
+          <label for="inputSkuNuevo">SKU</label>
+          <input type="text" id="inputSkuNuevo" placeholder="ej. 242">
+        </div>
+        <div>
+          <label for="inputPctNuevo">%</label>
+          <input type="number" id="inputPctNuevo" min="1" max="99" step="1" style="width:70px;">
+        </div>
+        <button class="chico" id="btnAgregarSku">Agregar / actualizar</button>
+      </div>
+      <div id="estadoConfig" class="estado"></div>
+    </div>
+  </div>
+
+  <!-- Métricas de las ofertas -->
+  <div class="panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; cursor:pointer;" id="toggleMetricas">
+      <label style="margin:0; color:var(--amber); font-weight:600;">📊 Métricas de las ofertas</label>
+      <span id="toggleMetricasIcono" style="color:var(--text-dim);">▸</span>
+    </div>
+    <div id="metricasBody" class="oculto" style="margin-top:12px;">
+      <div class="metricas-grid" id="metricasGrid"></div>
+      <div style="margin-top:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+        <button class="chico secondary" id="btnActualizarMetricas">Actualizar candidatos/activos de todas</button>
+        <span id="estadoMetricas" class="estado" style="margin:0;"></span>
+      </div>
+      <div id="metricasPorTipo" style="margin-top:14px;"></div>
+    </div>
+  </div>
+
+  <!-- Grid de tipos de promoción -->
+  <div id="estadoCarga" class="estado">Cargando promociones activas...</div>
+  <div id="gridTipos" class="grid-tipos"></div>
+</div>
+
+<!-- ============================================================
+     MODAL: Funcionamiento de la app
+     ============================================================ -->
+<div id="modalFuncionamiento" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2>¿Cómo funciona esta app?</h2>
+    <p>Gestiona las promociones de Mercado Libre de CORAZ sin entrar publicación por publicación.</p>
+    <h3>De dónde salen los datos</h3>
+    <p>Se consulta en vivo la API de Mercado Libre (recurso <code>seller-promotions</code>) usando el mismo token que ya usan el resto de las apps de CORAZ. No hay copia local de las promociones — lo que ves es el estado real en ML en el momento de cargar la página.</p>
+    <h3>Los 12 tipos de promoción</h3>
+    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones ("Campaña propia" y "Campaña tradicional") los controlás vos por completo: podés subir todas las publicaciones candidatas de una campaña con un clic, o bajarlas todas. El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo, pero todavía no se pueden gestionar en bloque desde acá (algunos ML los aplica automáticamente, como "Co-participación automática").</p>
+    <h3>Subir a todas / Bajar de todas</h3>
+    <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que configuraste para cada SKU (o el default si no tiene uno propio). "Bajar de todas" saca las que están activas. Ambas acciones te muestran un detalle publicación por publicación al terminar.</p>
+    <h3>% de descuento por SKU</h3>
+    <p>Es la configuración que usa "Subir a todas" para calcular el precio de cada publicación. Se guarda en la base de CORAZ, no en Mercado Libre, así que podés ajustarla cuando quieras sin afectar nada hasta que vuelvas a apretar "Subir a todas".</p>
+    <div class="modal-cerrar"><button id="btnCerrarFuncionamiento">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: Confirmación de acción en bloque
+     ============================================================ -->
+<div id="modalConfirmar" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2 id="confirmarTitulo">Confirmar acción</h2>
+    <p id="confirmarTexto"></p>
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary" id="btnCancelarAccion">Cancelar</button>
+      <button id="btnConfirmarAccion">Confirmar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: Resultado de acción en bloque
+     ============================================================ -->
+<div id="modalResultado" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2 id="resultadoTitulo">Resultado</h2>
+    <p id="resultadoResumen"></p>
+    <div id="resultadoTablaWrap"></div>
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary oculto" id="btnReintentarFallidos">Reintentar fallidos</button>
+      <button id="btnCerrarResultado">Cerrar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* ============================================================
+     CONFIG
+     ============================================================ */
+  var SUPABASE_URL = "https://kvewsxrfogosjwehookj.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imt2ZXdzeHJmb2dvc2p3ZWhvb2tqIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODU3OTA2OTksImV4cCI6MjEwMTM2NjY5OX0.6oyDPFG_8hAAULXCUn6uO7C-abxMSOxxMFFJ_xBFZHY";
+  var FN_BASE = SUPABASE_URL + "/functions/v1";
+  var URL_DIAG = FN_BASE + "/ml-promos-diag";
+  var URL_BULK = FN_BASE + "/ml-promos-bulk";
+  var URL_DESCUENTOS = FN_BASE + "/ml-promos-descuentos-crud";
+  var TIMEOUT_MS = 20000;
+
+  // Los 12 tipos de /seller-promotions. subir/bajar controlan si el tipo tiene
+  // botones de bulk funcionales (confirmado contra doc oficial, 2026-09-01).
+  var TIPOS = [
+    { codigo: "SELLER_CAMPAIGN", nombre: "Campaña propia", explicacion: "La armás y controlás vos (ej: tu promo fija mensual). Descuento fijo o flexible que vos definís.", subir: true, bajar: true },
+    { codigo: "DEAL", nombre: "Campaña tradicional (Deal)", explicacion: "ML te invita, vos elegís el precio final dentro del rango permitido.", subir: true, bajar: true },
+    { codigo: "DOD", nombre: "Oferta del día", explicacion: "ML sugiere el precio, vos definís el tuyo dentro del rango. Una vez activada no se puede sacar, solo pausar la publicación.", subir: true, bajar: false },
+    { codigo: "MARKETPLACE_CAMPAIGN", nombre: "Campaña co-financiada", explicacion: "ML te invita y paga parte del descuento — el precio lo calcula ML solo, vos solo te sumás.", subir: true, bajar: false },
+    { codigo: "SMART", nombre: "Co-participación automática", explicacion: "Parecida a la co-financiada, pero ML elige los candidatos solo. Vos igual tenés que sumarte a cada item.", subir: true, bajar: false },
+    { codigo: "VOLUME", nombre: "Descuento por volumen", explicacion: "Tipo 3x2. ML te invita y calcula el descuento, vos adherís los items candidatos.", subir: true, bajar: false },
+    { codigo: "PRE_NEGOTIATED", nombre: "Descuento pre-negociado", explicacion: "Acuerdo puntual por item entre vos y ML. Solo hace falta aceptar la invitación.", subir: true, bajar: false },
+    { codigo: "UNHEALTHY_STOCK", nombre: "Liquidación de stock parado", explicacion: "ML te invita sobre publicaciones con baja rotación y calcula el descuento.", subir: true, bajar: false },
+    { codigo: "SELLER_COUPON_CAMPAIGN", nombre: "Cupón propio", explicacion: "Cupón que armás vos, se aplica en el checkout — no cambia el precio de lista.", subir: true, bajar: false },
+    { codigo: "PRICE_MATCHING", nombre: "Ajuste a la competencia", explicacion: "ML ajusta el precio automáticamente para igualar a la competencia.", subir: true, bajar: false },
+    { codigo: "LIGHTNING", nombre: "Oferta relámpago", explicacion: "Oferta corta con stock reservado. Mecanismo de alta todavía no confirmado del todo — por ahora solo informativo.", subir: false, bajar: false },
+    { codigo: "PRICE_DISCOUNT", nombre: "Descuento simple", explicacion: "Descuento puntual sobre una publicación, no es una campaña con candidatos — necesita otra pantalla, no bulk por tipo.", subir: false, bajar: false },
+  ];
+
+  if (typeof window.supabase === "undefined") {
+    document.getElementById("cdnFail").classList.add("show");
+    return;
+  }
+
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  var AUTH = null;
+  var promoItemsState = {}; // promotion_id -> { candidatos: [...], activos: [...] }, lo llena "Ver candidatos/activos"
+  var BATCH_SIZE = 12; // por debajo de MAX_ITEMS_POR_TANDA (15) del servidor, con margen
+  var TIMEOUT_TANDA_MS = 40000; // las tandas de bulk tardan más que una consulta simple
+
+  var els = {
+    gate: document.getElementById("gate"),
+    gateEmail: document.getElementById("gateEmail"),
+    gatePass: document.getElementById("gatePass"),
+    gateBtn: document.getElementById("gateBtn"),
+    gateError: document.getElementById("gateError"),
+    app: document.getElementById("app"),
+    btnLogout: document.getElementById("btnLogout"),
+    btnFuncionamiento: document.getElementById("btnFuncionamiento"),
+    modalFuncionamiento: document.getElementById("modalFuncionamiento"),
+    btnCerrarFuncionamiento: document.getElementById("btnCerrarFuncionamiento"),
+    estadoCarga: document.getElementById("estadoCarga"),
+    gridTipos: document.getElementById("gridTipos"),
+    toggleMetricas: document.getElementById("toggleMetricas"),
+    toggleMetricasIcono: document.getElementById("toggleMetricasIcono"),
+    metricasBody: document.getElementById("metricasBody"),
+    metricasGrid: document.getElementById("metricasGrid"),
+    metricasPorTipo: document.getElementById("metricasPorTipo"),
+    btnActualizarMetricas: document.getElementById("btnActualizarMetricas"),
+    estadoMetricas: document.getElementById("estadoMetricas"),
+    toggleConfig: document.getElementById("toggleConfig"),
+    toggleConfigIcono: document.getElementById("toggleConfigIcono"),
+    configBody: document.getElementById("configBody"),
+    inputDefault: document.getElementById("inputDefault"),
+    btnGuardarDefault: document.getElementById("btnGuardarDefault"),
+    listaSkus: document.getElementById("listaSkus"),
+    inputSkuNuevo: document.getElementById("inputSkuNuevo"),
+    inputPctNuevo: document.getElementById("inputPctNuevo"),
+    btnAgregarSku: document.getElementById("btnAgregarSku"),
+    estadoConfig: document.getElementById("estadoConfig"),
+    modalConfirmar: document.getElementById("modalConfirmar"),
+    confirmarTitulo: document.getElementById("confirmarTitulo"),
+    confirmarTexto: document.getElementById("confirmarTexto"),
+    btnCancelarAccion: document.getElementById("btnCancelarAccion"),
+    btnConfirmarAccion: document.getElementById("btnConfirmarAccion"),
+    modalResultado: document.getElementById("modalResultado"),
+    resultadoTitulo: document.getElementById("resultadoTitulo"),
+    resultadoResumen: document.getElementById("resultadoResumen"),
+    resultadoTablaWrap: document.getElementById("resultadoTablaWrap"),
+    btnCerrarResultado: document.getElementById("btnCerrarResultado"),
+    btnReintentarFallidos: document.getElementById("btnReintentarFallidos"),
+  };
+
+  /* ============================================================
+     HELPERS
+     ============================================================ */
+  function fetchConTimeout(url, opciones, timeoutMs) {
+    var controller = new AbortController();
+    var timeoutId = setTimeout(function () { controller.abort(); }, timeoutMs || TIMEOUT_MS);
+    return fetch(url, Object.assign({}, opciones, { signal: controller.signal }))
+      .then(function (resp) {
+        clearTimeout(timeoutId);
+        return resp.json().then(function (data) { return { status: resp.status, data: data }; });
+      })
+      .catch(function (err) {
+        clearTimeout(timeoutId);
+        if (err.name === "AbortError") throw new Error("timeout");
+        throw err;
+      });
+  }
+
+  function escapeHtml(s) {
+    return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function fechaCorta(iso) {
+    if (!iso) return "";
+    try {
+      var d = new Date(iso);
+      return d.toLocaleDateString("es-AR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    } catch (e) { return iso; }
+  }
+
+  function kpiHelp(texto) {
+    return '<span class="kpi-help" data-help="' + escapeHtml(texto) + '">?<span class="globo">' + escapeHtml(texto) + '</span></span>';
+  }
+
+  document.addEventListener("click", function (e) {
+    var abiertos = document.querySelectorAll(".kpi-help.abierto");
+    var target = e.target.closest ? e.target.closest(".kpi-help") : null;
+    abiertos.forEach(function (el) { if (el !== target) el.classList.remove("abierto"); });
+    if (target) target.classList.toggle("abierto");
+  });
+
+  /* ============================================================
+     LOGIN
+     ============================================================ */
+  async function hacerLogin() {
+    var email = els.gateEmail.value.trim();
+    var password = els.gatePass.value;
+    els.gateError.textContent = "";
+    if (!email || !password) { els.gateError.textContent = "Completá email y contraseña."; return; }
+
+    els.gateBtn.disabled = true;
+    els.gateBtn.textContent = "Ingresando…";
+    try {
+      var res = await sb.auth.signInWithPassword({ email: email, password: password });
+      if (res.error) throw res.error;
+    } catch (e) {
+      els.gateError.textContent = "No se pudo iniciar sesión. Revisá tus datos.";
+      els.gateBtn.disabled = false;
+      els.gateBtn.textContent = "Ingresar";
+    }
+  }
+
+  els.gateBtn.addEventListener("click", hacerLogin);
+  els.gatePass.addEventListener("keydown", function (e) { if (e.key === "Enter") hacerLogin(); });
+  els.btnLogout.addEventListener("click", function () { sb.auth.signOut(); });
+
+  sb.auth.onAuthStateChange(function (_event, session) {
+    if (session) {
+      AUTH = "Bearer " + session.access_token;
+      els.gate.classList.add("oculto");
+      els.app.classList.remove("oculto");
+      arrancarApp();
+    } else {
+      AUTH = null;
+      els.app.classList.add("oculto");
+      els.gate.classList.remove("oculto");
+      els.gateBtn.disabled = false;
+      els.gateBtn.textContent = "Ingresar";
+    }
+  });
+
+  sb.auth.getSession();
+
+  /* ============================================================
+     MODAL FUNCIONAMIENTO
+     ============================================================ */
+  els.btnFuncionamiento.addEventListener("click", function () { els.modalFuncionamiento.classList.remove("oculto"); });
+  els.btnCerrarFuncionamiento.addEventListener("click", function () { els.modalFuncionamiento.classList.add("oculto"); });
+
+  /* ============================================================
+     CONFIG % POR SKU
+     ============================================================ */
+  els.toggleConfig.addEventListener("click", function () {
+    var abierto = !els.configBody.classList.contains("oculto");
+    els.configBody.classList.toggle("oculto");
+    els.toggleConfigIcono.textContent = abierto ? "▸" : "▾";
+    if (!abierto) cargarConfigDescuentos();
+  });
+
+  function cargarConfigDescuentos() {
+    els.estadoConfig.textContent = "Cargando...";
+    els.estadoConfig.className = "estado";
+    fetchConTimeout(URL_DESCUENTOS, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
+        els.inputDefault.value = res.data.default;
+        renderListaSkus(res.data.skus || []);
+        els.estadoConfig.textContent = "";
+      })
+      .catch(function (err) {
+        els.estadoConfig.textContent = "Error cargando configuración: " + err.message;
+        els.estadoConfig.className = "estado err";
+      });
+  }
+
+  function renderListaSkus(filas) {
+    if (filas.length === 0) {
+      els.listaSkus.innerHTML = '<div class="sin-instancias">Ningún SKU con % propio todavía — todos usan el default.</div>';
+      return;
+    }
+    els.listaSkus.innerHTML = filas.map(function (f) {
+      return '<div class="fila-sku">' +
+        '<span class="sku">' + escapeHtml(f.sku) + '</span>' +
+        '<span>' + f.porcentaje + '%</span>' +
+        '<button class="chico secondary" data-borrar-sku="' + escapeHtml(f.sku) + '">Quitar</button>' +
+        '</div>';
+    }).join("");
+
+    els.listaSkus.querySelectorAll("[data-borrar-sku]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var sku = btn.getAttribute("data-borrar-sku");
+        btn.disabled = true;
+        fetchConTimeout(URL_DESCUENTOS + "?sku=" + encodeURIComponent(sku), { method: "DELETE", headers: { Authorization: AUTH } })
+          .then(function () { cargarConfigDescuentos(); })
+          .catch(function (err) {
+            els.estadoConfig.textContent = "Error: " + err.message;
+            els.estadoConfig.className = "estado err";
+            btn.disabled = false;
+          });
+      });
+    });
+  }
+
+  els.btnGuardarDefault.addEventListener("click", function () {
+    var pct = Number(els.inputDefault.value);
+    if (!pct || pct <= 0 || pct >= 100) { els.estadoConfig.textContent = "% inválido."; els.estadoConfig.className = "estado err"; return; }
+    els.btnGuardarDefault.disabled = true;
+    fetchConTimeout(URL_DESCUENTOS, { method: "POST", headers: { Authorization: AUTH, "Content-Type": "application/json" }, body: JSON.stringify({ sku: "__default__", porcentaje: pct }) })
+      .then(function () { els.estadoConfig.textContent = "Default guardado."; els.estadoConfig.className = "estado ok"; })
+      .catch(function (err) { els.estadoConfig.textContent = "Error: " + err.message; els.estadoConfig.className = "estado err"; })
+      .finally(function () { els.btnGuardarDefault.disabled = false; });
+  });
+
+  els.btnAgregarSku.addEventListener("click", function () {
+    var sku = els.inputSkuNuevo.value.trim();
+    var pct = Number(els.inputPctNuevo.value);
+    if (!sku) { els.estadoConfig.textContent = "Falta el SKU."; els.estadoConfig.className = "estado err"; return; }
+    if (!pct || pct <= 0 || pct >= 100) { els.estadoConfig.textContent = "% inválido."; els.estadoConfig.className = "estado err"; return; }
+
+    els.btnAgregarSku.disabled = true;
+    fetchConTimeout(URL_DESCUENTOS, { method: "POST", headers: { Authorization: AUTH, "Content-Type": "application/json" }, body: JSON.stringify({ sku: sku, porcentaje: pct }) })
+      .then(function () {
+        els.inputSkuNuevo.value = ""; els.inputPctNuevo.value = "";
+        cargarConfigDescuentos();
+      })
+      .catch(function (err) { els.estadoConfig.textContent = "Error: " + err.message; els.estadoConfig.className = "estado err"; })
+      .finally(function () { els.btnAgregarSku.disabled = false; });
+  });
+
+  /* ============================================================
+     CARGA DE PROMOCIONES ACTIVAS Y RENDER DE HERO CARDS
+     ============================================================ */
+  function arrancarApp() {
+    els.estadoCarga.textContent = "Cargando promociones activas...";
+    els.estadoCarga.className = "estado";
+    els.gridTipos.innerHTML = "";
+
+    fetchConTimeout(URL_DIAG, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "no se pudo leer");
+        var resultados = (res.data.data && res.data.data.results) || [];
+        els.estadoCarga.textContent = "";
+        renderGrid(resultados);
+      })
+      .catch(function (err) {
+        els.estadoCarga.textContent = "No se pudieron cargar las promociones: " + err.message;
+        els.estadoCarga.className = "estado err";
+        renderGrid([]);
+      });
+  }
+
+  function renderGrid(promosActivas) {
+    ultimasPromosActivas = promosActivas;
+    var porTipo = {};
+    promosActivas.forEach(function (p) {
+      if (!porTipo[p.type]) porTipo[p.type] = [];
+      porTipo[p.type].push(p);
+    });
+
+    els.gridTipos.innerHTML = TIPOS.map(function (tipo) {
+      return renderHero(tipo, porTipo[tipo.codigo] || []);
+    }).join("");
+
+    renderMetricasBase(promosActivas, porTipo);
+
+    // Wire de botones subir/bajar por instancia
+    els.gridTipos.querySelectorAll("[data-accion]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var promotionId = btn.getAttribute("data-promotion-id");
+        var promotionType = btn.getAttribute("data-promotion-type");
+        var accion = btn.getAttribute("data-accion");
+        var nombre = btn.getAttribute("data-nombre");
+        abrirConfirmacion(promotionId, promotionType, accion, nombre);
+      });
+    });
+
+    els.gridTipos.querySelectorAll("[data-ver-conteo]").forEach(function (btn) {
+      btn.addEventListener("click", function () { cargarConteo(btn); });
+    });
+  }
+
+  function renderHero(tipo, instancias) {
+    var esControlable = tipo.subir || tipo.bajar;
+    var badgeClase = esControlable ? "hero-badge controlable" : "hero-badge";
+    var badgeTexto = esControlable ? "Control disponible" : "Solo informativo";
+
+    var instanciasHtml;
+    if (instancias.length === 0) {
+      instanciasHtml = '<div class="sin-instancias">Sin campañas activas o pendientes de este tipo ahora.</div>';
+    } else {
+      instanciasHtml = '<div class="instancias">' + instancias.map(function (inst) {
+        return renderInstancia(tipo, inst);
+      }).join("") + '</div>';
+    }
+
+    if (!esControlable) {
+      instanciasHtml += '<div class="proximamente">Control en bloque para este tipo: próximamente.</div>';
+    }
+
+    return '<div class="hero ' + (esControlable ? "controlable" : "") + '">' +
+      '<div class="hero-top">' +
+        '<div class="hero-nombre">' + escapeHtml(tipo.nombre) + '</div>' +
+        '<div class="' + badgeClase + '">' + badgeTexto + '</div>' +
+      '</div>' +
+      '<div class="hero-explicacion">' + escapeHtml(tipo.explicacion) + '</div>' +
+      instanciasHtml +
+    '</div>';
+  }
+
+  function renderInstancia(tipo, inst) {
+    var idSeguro = escapeHtml(inst.id || "");
+    var nombre = inst.name || inst.id || "(sin nombre)";
+    var badgeEstado = inst.status === "started" ? "started" : "pending";
+    var badgeTexto = inst.status === "started" ? "Corriendo" : (inst.status || "—");
+
+    var fechas = "";
+    if (inst.start_date || inst.finish_date) {
+      fechas = fechaCorta(inst.start_date) + (inst.finish_date ? " → " + fechaCorta(inst.finish_date) : "");
+    }
+
+    var acciones = "";
+    if ((tipo.subir || tipo.bajar) && inst.id) {
+      acciones =
+        '<div class="instancia-acciones">' +
+          '<span class="conteo-preview" data-conteo-de="' + idSeguro + '">' +
+            '<button class="chico secondary" data-ver-conteo data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '">Ver candidatos/activos</button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="instancia-acciones oculto" data-botones-de="' + idSeguro + '">' +
+          (tipo.subir ? '<button class="chico" data-accion="subir" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Subir a todas</button>' : "") +
+          (tipo.bajar ? '<button class="chico danger" data-accion="bajar" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Bajar de todas</button>' : "") +
+        '</div>';
+    }
+
+    return '<div class="instancia">' +
+      '<span class="nombre">' + escapeHtml(nombre) + '</span>' +
+      '<span class="estado-badge ' + badgeEstado + '">' + escapeHtml(badgeTexto) + '</span>' +
+      (fechas ? '<div class="fechas">' + escapeHtml(fechas) + '</div>' : "") +
+      acciones +
+    '</div>';
+  }
+
+  function cargarConteo(btnVerConteo) {
+    var promotionId = btnVerConteo.getAttribute("data-promotion-id");
+    var promotionType = btnVerConteo.getAttribute("data-promotion-type");
+    var contenedor = btnVerConteo.closest("[data-conteo-de]");
+    var botonesAccion = els.gridTipos.querySelector('[data-botones-de="' + cssEscape(promotionId) + '"]');
+
+    btnVerConteo.disabled = true;
+    btnVerConteo.textContent = "Consultando...";
+
+    var url = URL_BULK + "?promotion_id=" + encodeURIComponent(promotionId) + "&promotion_type=" + encodeURIComponent(promotionType);
+    return fetchConTimeout(url, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
+        promoItemsState[promotionId] = {
+          candidatos: res.data.items_candidatos || [],
+          activos: res.data.items_activos || [],
+        };
+        contenedor.innerHTML = kpiHelp("Candidatas: publicaciones invitadas a esta campaña que todavía no están aplicadas. Activas: ya están corriendo con el descuento puesto. Se calcula consultando en vivo /seller-promotions/promotions/{id}/items en ML.") +
+          ' Candidatas: <b>' + res.data.candidatos + '</b> · Activas: <b>' + res.data.activos + '</b>';
+        if (botonesAccion) {
+          botonesAccion.classList.remove("oculto");
+          var btnSubir = botonesAccion.querySelector('[data-accion="subir"]');
+          var btnBajar = botonesAccion.querySelector('[data-accion="bajar"]');
+          if (btnSubir) { btnSubir.textContent = "Subir a todas (" + res.data.candidatos + ")"; btnSubir.disabled = res.data.candidatos === 0; }
+          if (btnBajar) { btnBajar.textContent = "Bajar de todas (" + res.data.activos + ")"; btnBajar.disabled = res.data.activos === 0; }
+        }
+      })
+      .catch(function (err) {
+        contenedor.innerHTML = '<span class="estado err">Error: ' + escapeHtml(err.message) + '</span> <button class="chico secondary" data-ver-conteo data-promotion-id="' + escapeHtml(promotionId) + '" data-promotion-type="' + escapeHtml(promotionType) + '">Reintentar</button>';
+        var nuevoBtn = contenedor.querySelector("[data-ver-conteo]");
+        if (nuevoBtn) nuevoBtn.addEventListener("click", function () { cargarConteo(nuevoBtn); });
+      });
+  }
+
+  function cssEscape(s) {
+    return String(s).replace(/["\\]/g, "\\$&");
+  }
+
+  /* ============================================================
+     CONFIRMACIÓN + EJECUCIÓN DE ACCIÓN EN BLOQUE
+     ============================================================ */
+  var accionPendiente = null;
+
+  function abrirConfirmacion(promotionId, promotionType, accion, nombre) {
+    accionPendiente = { promotionId: promotionId, promotionType: promotionType, accion: accion };
+    els.confirmarTitulo.textContent = accion === "subir" ? "¿Subir todas las candidatas?" : "¿Bajar todas las activas?";
+    els.confirmarTexto.textContent = (accion === "subir"
+      ? 'Va a aplicar el precio calculado (según el % configurado por SKU) a cada publicación candidata de "' + nombre + '". Esto cambia precios reales visibles en ML.'
+      : 'Va a sacar de "' + nombre + '" a cada publicación que esté activa ahí. No se puede deshacer con un botón — habría que volver a aplicarlas a mano.');
+    els.modalConfirmar.classList.remove("oculto");
+  }
+
+  els.btnCancelarAccion.addEventListener("click", function () {
+    accionPendiente = null;
+    els.modalConfirmar.classList.add("oculto");
+  });
+
+  els.btnConfirmarAccion.addEventListener("click", function () {
+    if (!accionPendiente) return;
+    var a = accionPendiente;
+    els.modalConfirmar.classList.add("oculto");
+    els.btnConfirmarAccion.disabled = true;
+
+    var estado = promoItemsState[a.promotionId];
+    var itemsTotal = estado ? (a.accion === "subir" ? estado.candidatos : estado.activos) : [];
+
+    if (!itemsTotal || itemsTotal.length === 0) {
+      mostrarResultadoFinal({ ok: true, log: [] }, a.accion, 0, 0, 0);
+      els.btnConfirmarAccion.disabled = false;
+      accionPendiente = null;
+      return;
+    }
+
+    ejecutarEnTandas(a, itemsTotal);
+  });
+
+  var ultimoContextoTanda = null; // { a, itemsTotal, logAcumulado } -- para poder armar "Reintentar fallidos"
+  var ultimasPromosActivas = []; // cache de la última carga de arrancarApp(), la usan las métricas
+
+  els.toggleMetricas.addEventListener("click", function () {
+    var abierto = !els.metricasBody.classList.contains("oculto");
+    els.metricasBody.classList.toggle("oculto");
+    els.toggleMetricasIcono.textContent = abierto ? "▸" : "▾";
+  });
+
+  var NOMBRES_TIPO = {};
+  TIPOS.forEach(function (t) { NOMBRES_TIPO[t.codigo] = t.nombre; });
+
+  function renderMetricasBase(promosActivas, porTipo) {
+    var corriendo = promosActivas.filter(function (p) { return p.status === "started"; }).length;
+    var pendientes = promosActivas.length - corriendo;
+
+    // Si ya se consultó "Ver candidatos/activos" en alguna card, sumamos lo que hay cacheado.
+    var totales = sumarPromoItemsState();
+
+    els.metricasGrid.innerHTML =
+      statBox(promosActivas.length, "Campañas activas + pendientes") +
+      statBox(corriendo, "Corriendo ahora") +
+      statBox(totales.activos, "Publicaciones con oferta activa" + (totales.consultadas < promosActivas.length ? " *" : ""), totales.consultadas === 0) +
+      statBox(totales.candidatos, "Candidatas sin aplicar" + (totales.consultadas < promosActivas.length ? " *" : ""), totales.consultadas === 0);
+
+    var filasTipo = Object.keys(porTipo).sort(function (a, b) { return porTipo[b].length - porTipo[a].length; }).map(function (codigo) {
+      return '<div class="tipo-fila"><span>' + escapeHtml(NOMBRES_TIPO[codigo] || codigo) + '</span><span class="cant">' + porTipo[codigo].length + '</span></div>';
+    }).join("");
+
+    els.metricasPorTipo.innerHTML = (filasTipo || '<div class="sin-instancias">Sin campañas para mostrar.</div>') +
+      (promosActivas.length > 0 ? '<div class="proximamente" style="margin-top:8px;">* Publicaciones activas/candidatas: solo cuenta las campañas que ya consultaste con "Ver candidatos/activos" (en cada card) o con el botón de abajo — no se traen todas solas para no demorar la carga.</div>' : "");
+  }
+
+  function sumarPromoItemsState() {
+    var activos = 0, candidatos = 0, consultadas = 0;
+    Object.keys(promoItemsState).forEach(function (id) {
+      var e = promoItemsState[id];
+      activos += (e.activos || []).length;
+      candidatos += (e.candidatos || []).length;
+      consultadas++;
+    });
+    return { activos: activos, candidatos: candidatos, consultadas: consultadas };
+  }
+
+  function statBox(valor, etiqueta, esDim) {
+    return '<div class="stat-box"><div class="valor' + (esDim ? " dim" : "") + '">' + valor + '</div><div class="etiqueta">' + escapeHtml(etiqueta) + '</div></div>';
+  }
+
+  els.btnActualizarMetricas.addEventListener("click", function () {
+    var botones = Array.prototype.slice.call(els.gridTipos.querySelectorAll("[data-ver-conteo]"));
+    if (botones.length === 0) {
+      els.estadoMetricas.textContent = "No hay campañas controlables para consultar.";
+      els.estadoMetricas.className = "estado";
+      return;
+    }
+
+    els.btnActualizarMetricas.disabled = true;
+    var i = 0;
+    function siguiente() {
+      if (i >= botones.length) {
+        els.estadoMetricas.textContent = "Actualizado.";
+        els.estadoMetricas.className = "estado ok";
+        els.btnActualizarMetricas.disabled = false;
+        var porTipo = {};
+        ultimasPromosActivas.forEach(function (p) { (porTipo[p.type] = porTipo[p.type] || []).push(p); });
+        renderMetricasBase(ultimasPromosActivas, porTipo);
+        return;
+      }
+      els.estadoMetricas.textContent = "Consultando " + (i + 1) + "/" + botones.length + "...";
+      els.estadoMetricas.className = "estado";
+      cargarConteo(botones[i]).then(function () {
+        i++;
+        siguiente();
+      });
+    }
+    siguiente();
+  });
+
+  function chunk(arr, size) {
+    var out = [];
+    for (var i = 0; i < arr.length; i += size) out.push(arr.slice(i, i + size));
+    return out;
+  }
+
+  function textoError(detalle) {
+    if (!detalle) return "sin detalle";
+    if (typeof detalle === "string") return detalle;
+    if (detalle.message) return detalle.message;
+    if (detalle.cause) return Array.isArray(detalle.cause) ? detalle.cause.join("; ") : String(detalle.cause);
+    try { return JSON.stringify(detalle); } catch (e) { return "error desconocido"; }
+  }
+
+  function ejecutarEnTandas(a, itemsTotal) {
+    var tandas = chunk(itemsTotal, BATCH_SIZE);
+    var logAcumulado = [];
+    var exitosos = 0, errores = 0, indice = 0;
+
+    els.resultadoTitulo.textContent = a.accion === "subir" ? "Subiendo a todas..." : "Bajando de todas...";
+    els.resultadoResumen.textContent = "Procesando 0/" + itemsTotal.length + "...";
+    els.resultadoTablaWrap.innerHTML = "";
+    els.btnReintentarFallidos.classList.add("oculto");
+    els.modalResultado.classList.remove("oculto");
+
+    function siguienteTanda() {
+      if (indice >= tandas.length) {
+        els.resultadoTitulo.textContent = a.accion === "subir" ? "Resultado — Subir a todas" : "Resultado — Bajar de todas";
+        els.resultadoResumen.textContent = itemsTotal.length + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.";
+        renderTablaLog(logAcumulado, a.accion);
+
+        ultimoContextoTanda = { a: a, itemsTotal: itemsTotal, logAcumulado: logAcumulado };
+        els.btnReintentarFallidos.classList.toggle("oculto", errores === 0);
+
+        els.btnConfirmarAccion.disabled = false;
+        accionPendiente = null;
+        arrancarApp();
+        return;
+      }
+
+      var tanda = tandas[indice];
+      fetchConTimeout(URL_BULK, {
+        method: "POST",
+        headers: { Authorization: AUTH, "Content-Type": "application/json" },
+        body: JSON.stringify({ promotion_id: a.promotionId, promotion_type: a.promotionType, accion: a.accion, items: tanda }),
+      }, TIMEOUT_TANDA_MS)
+        .then(function (res) {
+          if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error en tanda");
+          logAcumulado = logAcumulado.concat(res.data.log || []);
+          exitosos += res.data.exitosos || 0;
+          errores += res.data.errores || 0;
+          indice++;
+          els.resultadoResumen.textContent = "Procesando " + logAcumulado.length + "/" + itemsTotal.length + "...";
+          renderTablaLog(logAcumulado, a.accion);
+          siguienteTanda();
+        })
+        .catch(function (err) {
+          els.resultadoTitulo.textContent = "Se cortó a mitad de camino";
+          els.resultadoResumen.textContent = logAcumulado.length + "/" + itemsTotal.length + " procesadas antes del error (" + err.message + "). Podés reintentar: las que ya quedaron aplicadas/removidas no se vuelven a tocar dos veces, porque \"Ver candidatos/activos\" te va a traer el estado real actualizado.";
+          renderTablaLog(logAcumulado, a.accion);
+          els.btnConfirmarAccion.disabled = false;
+          accionPendiente = null;
+        });
+    }
+
+    siguienteTanda();
+  }
+
+  els.btnReintentarFallidos.addEventListener("click", function () {
+    if (!ultimoContextoTanda) return;
+    var ctx = ultimoContextoTanda;
+    var idsFallidos = {};
+    ctx.logAcumulado.forEach(function (l) { if (l.estado === "ERROR") idsFallidos[l.item_id] = true; });
+    var itemsFallidos = ctx.itemsTotal.filter(function (it) { return idsFallidos[it.id]; });
+    if (itemsFallidos.length === 0) return;
+    ejecutarEnTandas(ctx.a, itemsFallidos);
+  });
+
+  function renderTablaLog(log, accion) {
+    var filas = log.map(function (l) {
+      var esError = l.estado === "ERROR";
+      var extra = esError
+        ? '<span style="color:var(--err); font-size:0.72rem;">' + escapeHtml(textoError(l.detalle)) + '</span>'
+        : (accion === "subir" && l.precio_aplicado ? ("$" + l.precio_aplicado) : "");
+      return "<tr><td>" + escapeHtml(l.item_id) + "</td><td>" + escapeHtml(l.sku || "—") + "</td>" +
+        "<td><span class='tag-log " + escapeHtml(l.estado) + "'>" + escapeHtml(l.estado) + "</span></td><td>" + extra + "</td></tr>";
+    }).join("");
+    els.resultadoTablaWrap.innerHTML = '<table class="log"><thead><tr><th>Item</th><th>SKU</th><th>Estado</th><th></th></tr></thead><tbody>' + filas + '</tbody></table>';
+  }
+
+  function mostrarResultadoFinal(data, accion, total, exitosos, errores) {
+    els.resultadoTitulo.textContent = accion === "subir" ? "Resultado — Subir a todas" : "Resultado — Bajar de todas";
+    els.resultadoResumen.textContent = total === 0 ? "No había nada para procesar." : (total + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.");
+    els.btnReintentarFallidos.classList.add("oculto");
+    renderTablaLog((data && data.log) || [], accion);
+    els.modalResultado.classList.remove("oculto");
+  }
+
+  els.btnCerrarResultado.addEventListener("click", function () { els.modalResultado.classList.add("oculto"); });
+})();
+</script>
+</body>
+</html>
