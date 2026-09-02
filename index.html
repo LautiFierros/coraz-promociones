@@ -131,6 +131,7 @@
   }
   .instancia .estado-badge.started { background: var(--ok-soft); color: var(--ok); }
   .instancia .estado-badge.pending { background: var(--amber-soft); color: var(--amber); }
+  a.estado-badge:hover { background: var(--amber-dim) !important; color: #1a1408 !important; }
 
   .instancia-acciones { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; align-items: center; }
   .conteo-preview { font-size: 0.75rem; color: var(--text-dim); }
@@ -718,6 +719,22 @@
     '</div>';
   }
 
+  // Filtros del listado de promos del panel de ML por tipo de campaña.
+  // Confirmado por Lauti: SELLER_CAMPAIGN usa "seller_campaign_offer-{id en minúscula}".
+  // Los demás tipos: sin filtro confirmado todavía, va al listado general.
+  var FILTROS_ML_POR_TIPO = {
+    SELLER_CAMPAIGN: "seller_campaign_offer",
+  };
+
+  function urlVerEnML(promotionType, promotionId) {
+    var base = "https://vendedores.mercadolibre.com.ar/publicaciones/listado/promos?tab=promotions&page=1";
+    var prefijo = FILTROS_ML_POR_TIPO[promotionType];
+    if (prefijo && promotionId) {
+      return base + "&filters=" + encodeURIComponent(prefijo + "-" + promotionId.toLowerCase());
+    }
+    return base;
+  }
+
   function renderInstancia(tipo, inst) {
     var idSeguro = escapeHtml(inst.id || "");
     var nombre = inst.name || inst.id || "(sin nombre)";
@@ -728,6 +745,10 @@
     if (inst.start_date || inst.finish_date) {
       fechas = fechaCorta(inst.start_date) + (inst.finish_date ? " → " + fechaCorta(inst.finish_date) : "");
     }
+
+    var linkML = inst.id
+      ? '<a href="' + escapeHtml(urlVerEnML(tipo.codigo, inst.id)) + '" target="_blank" rel="noopener" class="estado-badge" style="background:var(--panel-border); color:var(--text-dim); text-decoration:none;">Ver en ML ↗</a>'
+      : "";
 
     var acciones = "";
     if ((tipo.subir || tipo.bajar) && inst.id) {
@@ -746,6 +767,7 @@
     return '<div class="instancia">' +
       '<span class="nombre">' + escapeHtml(nombre) + '</span>' +
       '<span class="estado-badge ' + badgeEstado + '">' + escapeHtml(badgeTexto) + '</span>' +
+      linkML +
       (fechas ? '<div class="fechas">' + escapeHtml(fechas) + '</div>' : "") +
       acciones +
     '</div>';
