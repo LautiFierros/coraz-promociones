@@ -293,6 +293,30 @@
 </div>
 
 <!-- ============================================================
+     MODAL: % base + excepciones por SKU (por campaña, cada vez que se sube)
+     ============================================================ -->
+<div id="modalPorcentaje" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2>Descuento para "<span id="porcentajeNombreCampana"></span>"</h2>
+    <p>Definí el % para esta tanda. Podés agregar excepciones por SKU — esos usan su propio % en vez del base.</p>
+
+    <label for="inputPctBase">% base (para todos los SKU sin excepción)</label>
+    <input type="number" id="inputPctBase" min="1" max="99" step="1" style="width:100%; margin-bottom:14px;">
+
+    <label style="margin-bottom:8px;">Excepciones por SKU</label>
+    <div id="excepcionesLista"></div>
+    <button class="chico secondary" id="btnAgregarExcepcion" type="button" style="margin-top:8px;">+ Agregar excepción por SKU</button>
+
+    <div id="estadoPorcentaje" class="estado err" style="margin-top:10px;"></div>
+
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary" id="btnCancelarPorcentaje">Cancelar</button>
+      <button id="btnContinuarPorcentaje">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
      MODAL: Confirmación de acción en bloque
      ============================================================ -->
 <div id="modalConfirmar" class="modal-fondo oculto">
@@ -356,6 +380,9 @@
     { codigo: "PRICE_DISCOUNT", nombre: "Descuento simple", explicacion: "Descuento puntual sobre una publicación, no es una campaña con candidatos — necesita otra pantalla, no bulk por tipo.", subir: false, bajar: false },
   ];
 
+  // Tipos donde el vendedor define el precio (los otros: ML lo calcula solo, no hace falta preguntar %).
+  var TIPOS_NECESITAN_PRECIO = ["DEAL", "SELLER_CAMPAIGN", "DOD"];
+
   if (typeof window.supabase === "undefined") {
     document.getElementById("cdnFail").classList.add("show");
     return;
@@ -398,6 +425,14 @@
     btnAgregarSku: document.getElementById("btnAgregarSku"),
     estadoConfig: document.getElementById("estadoConfig"),
     modalConfirmar: document.getElementById("modalConfirmar"),
+    modalPorcentaje: document.getElementById("modalPorcentaje"),
+    porcentajeNombreCampana: document.getElementById("porcentajeNombreCampana"),
+    inputPctBase: document.getElementById("inputPctBase"),
+    excepcionesLista: document.getElementById("excepcionesLista"),
+    btnAgregarExcepcion: document.getElementById("btnAgregarExcepcion"),
+    estadoPorcentaje: document.getElementById("estadoPorcentaje"),
+    btnCancelarPorcentaje: document.getElementById("btnCancelarPorcentaje"),
+    btnContinuarPorcentaje: document.getElementById("btnContinuarPorcentaje"),
     confirmarTitulo: document.getElementById("confirmarTitulo"),
     confirmarTexto: document.getElementById("confirmarTexto"),
     btnCancelarAccion: document.getElementById("btnCancelarAccion"),
@@ -519,6 +554,7 @@
       .then(function (res) {
         if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
         els.inputDefault.value = res.data.default;
+        defaultPctCache = res.data.default;
         renderListaSkus(res.data.skus || []);
         els.estadoConfig.textContent = "";
       })
@@ -625,7 +661,11 @@
         var promotionType = btn.getAttribute("data-promotion-type");
         var accion = btn.getAttribute("data-accion");
         var nombre = btn.getAttribute("data-nombre");
-        abrirConfirmacion(promotionId, promotionType, accion, nombre);
+        if (accion === "subir" && TIPOS_NECESITAN_PRECIO.indexOf(promotionType) !== -1) {
+          abrirModalPorcentaje(promotionId, promotionType, nombre);
+        } else {
+          abrirConfirmacion(promotionId, promotionType, accion, nombre);
+        }
       });
     });
 
@@ -734,16 +774,87 @@
   }
 
   /* ============================================================
+     MODAL: % base + excepciones por SKU (se pregunta cada vez que se sube)
+     ============================================================ */
+  var pctPendiente = null; // { promotionId, promotionType, nombre }
+  var defaultPctCache = 15; // se actualiza solo si abriste el panel de configuración general
+
+  function abrirModalPorcentaje(promotionId, promotionType, nombre) {
+    pctPendiente = { promotionId: promotionId, promotionType: promotionType, nombre: nombre };
+    els.porcentajeNombreCampana.textContent = nombre;
+    els.inputPctBase.value = defaultPctCache;
+    els.excepcionesLista.innerHTML = "";
+    els.estadoPorcentaje.textContent = "";
+    els.modalPorcentaje.classList.remove("oculto");
+  }
+
+  function agregarFilaExcepcion() {
+    var fila = document.createElement("div");
+    fila.className = "fila-sku";
+    fila.innerHTML =
+      '<input type="text" class="exc-sku" placeholder="SKU" style="flex:1;">' +
+      '<input type="number" class="exc-pct" placeholder="%" min="1" max="99" style="width:70px;">' +
+      '<button type="button" class="chico secondary btn-quitar-excepcion">Quitar</button>';
+    els.excepcionesLista.appendChild(fila);
+    fila.querySelector(".btn-quitar-excepcion").addEventListener("click", function () { fila.remove(); });
+  }
+
+  els.btnAgregarExcepcion.addEventListener("click", agregarFilaExcepcion);
+
+  function leerExcepciones() {
+    var filas = els.excepcionesLista.querySelectorAll(".fila-sku");
+    var out = [];
+    filas.forEach(function (fila) {
+      var sku = fila.querySelector(".exc-sku").value.trim();
+      var pct = Number(fila.querySelector(".exc-pct").value);
+      if (sku && pct > 0 && pct < 100) out.push({ sku: sku, porcentaje: pct });
+    });
+    return out;
+  }
+
+  els.btnCancelarPorcentaje.addEventListener("click", function () {
+    pctPendiente = null;
+    els.modalPorcentaje.classList.add("oculto");
+  });
+
+  els.btnContinuarPorcentaje.addEventListener("click", function () {
+    if (!pctPendiente) return;
+    var pctBase = Number(els.inputPctBase.value);
+    if (!pctBase || pctBase <= 0 || pctBase >= 100) {
+      els.estadoPorcentaje.textContent = "Poné un % base válido (entre 1 y 99).";
+      return;
+    }
+    var excepciones = leerExcepciones();
+    var p = pctPendiente;
+    els.modalPorcentaje.classList.add("oculto");
+    pctPendiente = null;
+    abrirConfirmacion(p.promotionId, p.promotionType, "subir", p.nombre, { porcentaje_base: pctBase, excepciones: excepciones });
+  });
+
+  /* ============================================================
      CONFIRMACIÓN + EJECUCIÓN DE ACCIÓN EN BLOQUE
      ============================================================ */
   var accionPendiente = null;
 
-  function abrirConfirmacion(promotionId, promotionType, accion, nombre) {
-    accionPendiente = { promotionId: promotionId, promotionType: promotionType, accion: accion };
+  function abrirConfirmacion(promotionId, promotionType, accion, nombre, pctConfig) {
+    accionPendiente = { promotionId: promotionId, promotionType: promotionType, accion: accion, pctConfig: pctConfig || null };
     els.confirmarTitulo.textContent = accion === "subir" ? "¿Subir todas las candidatas?" : "¿Bajar todas las activas?";
-    els.confirmarTexto.textContent = (accion === "subir"
-      ? 'Va a aplicar el precio calculado (según el % configurado por SKU) a cada publicación candidata de "' + nombre + '". Esto cambia precios reales visibles en ML.'
-      : 'Va a sacar de "' + nombre + '" a cada publicación que esté activa ahí. No se puede deshacer con un botón — habría que volver a aplicarlas a mano.');
+
+    var texto;
+    if (accion === "subir") {
+      texto = 'Va a aplicar precio a cada publicación candidata de "' + nombre + '"';
+      if (pctConfig) {
+        texto += " — % base: " + pctConfig.porcentaje_base + "%";
+        if (pctConfig.excepciones.length > 0) {
+          texto += ", con " + pctConfig.excepciones.length + " excepción(es) por SKU (" +
+            pctConfig.excepciones.map(function (e) { return e.sku + ": " + e.porcentaje + "%"; }).join(", ") + ")";
+        }
+      }
+      texto += ". Esto cambia precios reales visibles en ML.";
+    } else {
+      texto = 'Va a sacar de "' + nombre + '" a cada publicación que esté activa ahí. No se puede deshacer con un botón — habría que volver a aplicarlas a mano.';
+    }
+    els.confirmarTexto.textContent = texto;
     els.modalConfirmar.classList.remove("oculto");
   }
 
@@ -768,7 +879,7 @@
       return;
     }
 
-    ejecutarEnTandas(a, itemsTotal);
+    ejecutarEnTandas(a, itemsTotal, { pctConfig: a.pctConfig });
   });
 
   var ultimoContextoTanda = null; // { a, itemsTotal, logAcumulado } -- para poder armar "Reintentar fallidos"
@@ -863,7 +974,11 @@
     try { return JSON.stringify(detalle); } catch (e) { return "error desconocido"; }
   }
 
-  function ejecutarEnTandas(a, itemsTotal, modoPrecio) {
+  function ejecutarEnTandas(a, itemsTotal, opciones) {
+    opciones = opciones || {};
+    var modoPrecio = opciones.modoPrecio || null;
+    var pctConfig = opciones.pctConfig || null;
+
     var tandas = chunk(itemsTotal, BATCH_SIZE);
     var logAcumulado = [];
     var exitosos = 0, errores = 0, revisar = 0, indice = 0;
@@ -896,6 +1011,10 @@
       var tanda = tandas[indice];
       var payload = { promotion_id: a.promotionId, promotion_type: a.promotionType, accion: a.accion, items: tanda };
       if (modoPrecio) payload.modo_precio = modoPrecio;
+      if (pctConfig) {
+        payload.porcentaje_base = pctConfig.porcentaje_base;
+        payload.excepciones = pctConfig.excepciones;
+      }
 
       fetchConTimeout(URL_BULK, {
         method: "POST",
@@ -932,7 +1051,7 @@
     ctx.logAcumulado.forEach(function (l) { if (l.estado === "ERROR") idsFallidos[l.item_id] = true; });
     var itemsFallidos = ctx.itemsTotal.filter(function (it) { return idsFallidos[it.id]; });
     if (itemsFallidos.length === 0) return;
-    ejecutarEnTandas(ctx.a, itemsFallidos);
+    ejecutarEnTandas(ctx.a, itemsFallidos, { pctConfig: ctx.a.pctConfig });
   });
 
   els.btnUsarSugerido.addEventListener("click", function () {
@@ -942,7 +1061,7 @@
     ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR" && l.sugerido != null) idsRevisar[l.item_id] = true; });
     var itemsRevisar = ctx.itemsTotal.filter(function (it) { return idsRevisar[it.id]; });
     if (itemsRevisar.length === 0) return;
-    ejecutarEnTandas(ctx.a, itemsRevisar, "sugerido");
+    ejecutarEnTandas(ctx.a, itemsRevisar, { modoPrecio: "sugerido" });
   });
 
   function renderTablaLog(log, accion) {
