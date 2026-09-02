@@ -302,6 +302,9 @@
   <div class="modal-caja">
     <h2>Descuento para "<span id="porcentajeNombreCampana"></span>"</h2>
     <p>Definí el % para esta tanda. Podés agregar excepciones por SKU — esos usan su propio % en vez del base.</p>
+    <p style="font-size:0.78rem; color:var(--text-dim); background:var(--panel-2); border:1px solid var(--panel-border); border-radius:8px; padding:10px 12px;">
+      ⚠️ Mercado Libre le calcula a cada publicación un rango de descuento "creíble" (un % mínimo y un % máximo propio, que varía por item). Si el % que pongas queda afuera de ese rango para alguna publicación puntual, esa no se aplica sola — queda en <b>REVISAR</b> al final, mostrándote el rango real de esa publicación para que ajustes.
+    </p>
 
     <label for="inputPctBase">% base (para todos los SKU sin excepción)</label>
     <input type="number" id="inputPctBase" min="1" max="99" step="1" style="width:100%; margin-bottom:14px;">
