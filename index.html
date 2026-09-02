@@ -1072,8 +1072,13 @@
       } else if (l.estado === "REVISAR") {
         var partes = [];
         if (l.porcentaje_pedido != null) partes.push(l.porcentaje_pedido + "% pedido → $" + l.precio_pedido);
-        if (l.piso) partes.push("piso $" + l.piso);
-        if (l.techo) partes.push("techo $" + l.techo);
+        if (l.porcentaje_minimo != null || l.porcentaje_maximo != null) {
+          var rango = "rango válido: ";
+          rango += l.porcentaje_minimo != null ? l.porcentaje_minimo + "%" : "sin mínimo";
+          rango += " a ";
+          rango += l.porcentaje_maximo != null ? l.porcentaje_maximo + "%" : "sin máximo";
+          partes.push(rango);
+        }
         if (l.sugerido) partes.push("sugerido ML $" + l.sugerido);
         extra = '<span style="color:var(--amber); font-size:0.72rem;">' + escapeHtml(partes.join(" · ")) + '</span>';
       } else if (accion === "subir" && l.precio_aplicado) {
