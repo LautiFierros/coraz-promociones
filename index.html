@@ -720,17 +720,29 @@
   }
 
   // Filtros del listado de promos del panel de ML por tipo de campaña.
-  // Confirmado por Lauti: SELLER_CAMPAIGN usa "seller_campaign_offer-{id en minúscula}".
+  // Confirmado por Lauti:
+  //   SELLER_CAMPAIGN -> filtro por id: "seller_campaign_offer-{id en minúscula}"
+  //   DEAL             -> filtro por id: "meli_campaign_offer-{id en minúscula}"
+  //                       (el link real de ML suma tambien "official_event-..." y "qf_card-...",
+  //                       pero esos valores son internos de ML y no salen de nuestra API -- se omiten,
+  //                       el filtro por id solo debería alcanzar para llegar a esa campaña puntual)
+  //   LIGHTNING        -> filtro estático, no hay filtro por campaña individual
   // Los demás tipos: sin filtro confirmado todavía, va al listado general.
   var FILTROS_ML_POR_TIPO = {
-    SELLER_CAMPAIGN: "seller_campaign_offer",
+    SELLER_CAMPAIGN: { modo: "id", prefijo: "seller_campaign_offer" },
+    DEAL: { modo: "id", prefijo: "meli_campaign_offer" },
+    LIGHTNING: { modo: "estatico", valor: "flash_deal|qf_active|qf_card-flash_deals|ml|seller" },
   };
 
   function urlVerEnML(promotionType, promotionId) {
     var base = "https://vendedores.mercadolibre.com.ar/publicaciones/listado/promos?tab=promotions&page=1";
-    var prefijo = FILTROS_ML_POR_TIPO[promotionType];
-    if (prefijo && promotionId) {
-      return base + "&filters=" + encodeURIComponent(prefijo + "-" + promotionId.toLowerCase());
+    var cfg = FILTROS_ML_POR_TIPO[promotionType];
+    if (!cfg) return base;
+    if (cfg.modo === "id" && promotionId) {
+      return base + "&filters=" + encodeURIComponent(cfg.prefijo + "-" + promotionId.toLowerCase());
+    }
+    if (cfg.modo === "estatico") {
+      return base + "&filters=" + encodeURIComponent(cfg.valor);
     }
     return base;
   }
