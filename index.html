@@ -158,6 +158,7 @@
   .tag-log { font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
   .tag-log.APLICADO, .tag-log.REMOVIDO { background: var(--ok-soft); color: var(--ok); }
   .tag-log.ERROR { background: var(--err-soft); color: var(--err); }
+  .tag-log.REVISAR { background: var(--amber-soft); color: var(--amber); }
 
   /* -------------------- Config de % por SKU -------------------- */
   .fila-sku { display: flex; gap: 8px; align-items: center; padding: 6px 0; border-bottom: 1px solid var(--panel-border); font-size: 0.82rem; }
@@ -314,7 +315,10 @@
     <p id="resultadoResumen"></p>
     <div id="resultadoTablaWrap"></div>
     <div class="modal-cerrar" style="justify-content:space-between;">
-      <button class="secondary oculto" id="btnReintentarFallidos">Reintentar fallidos</button>
+      <div style="display:flex; gap:8px;">
+        <button class="secondary oculto" id="btnReintentarFallidos">Reintentar fallidos</button>
+        <button class="secondary oculto" id="btnUsarSugerido">Usar precio sugerido de ML</button>
+      </div>
       <button id="btnCerrarResultado">Cerrar</button>
     </div>
   </div>
@@ -404,6 +408,7 @@
     resultadoTablaWrap: document.getElementById("resultadoTablaWrap"),
     btnCerrarResultado: document.getElementById("btnCerrarResultado"),
     btnReintentarFallidos: document.getElementById("btnReintentarFallidos"),
+    btnUsarSugerido: document.getElementById("btnUsarSugerido"),
   };
 
   /* ============================================================
@@ -858,25 +863,29 @@
     try { return JSON.stringify(detalle); } catch (e) { return "error desconocido"; }
   }
 
-  function ejecutarEnTandas(a, itemsTotal) {
+  function ejecutarEnTandas(a, itemsTotal, modoPrecio) {
     var tandas = chunk(itemsTotal, BATCH_SIZE);
     var logAcumulado = [];
-    var exitosos = 0, errores = 0, indice = 0;
+    var exitosos = 0, errores = 0, revisar = 0, indice = 0;
 
     els.resultadoTitulo.textContent = a.accion === "subir" ? "Subiendo a todas..." : "Bajando de todas...";
     els.resultadoResumen.textContent = "Procesando 0/" + itemsTotal.length + "...";
     els.resultadoTablaWrap.innerHTML = "";
     els.btnReintentarFallidos.classList.add("oculto");
+    els.btnUsarSugerido.classList.add("oculto");
     els.modalResultado.classList.remove("oculto");
 
     function siguienteTanda() {
       if (indice >= tandas.length) {
         els.resultadoTitulo.textContent = a.accion === "subir" ? "Resultado — Subir a todas" : "Resultado — Bajar de todas";
-        els.resultadoResumen.textContent = itemsTotal.length + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.";
+        var resumen = itemsTotal.length + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error";
+        if (revisar > 0) resumen += ", " + revisar + " necesitan revisión (el % pedido queda fuera del rango que ML considera creíble)";
+        els.resultadoResumen.textContent = resumen + ".";
         renderTablaLog(logAcumulado, a.accion);
 
         ultimoContextoTanda = { a: a, itemsTotal: itemsTotal, logAcumulado: logAcumulado };
         els.btnReintentarFallidos.classList.toggle("oculto", errores === 0);
+        els.btnUsarSugerido.classList.toggle("oculto", revisar === 0);
 
         els.btnConfirmarAccion.disabled = false;
         accionPendiente = null;
@@ -885,16 +894,20 @@
       }
 
       var tanda = tandas[indice];
+      var payload = { promotion_id: a.promotionId, promotion_type: a.promotionType, accion: a.accion, items: tanda };
+      if (modoPrecio) payload.modo_precio = modoPrecio;
+
       fetchConTimeout(URL_BULK, {
         method: "POST",
         headers: { Authorization: AUTH, "Content-Type": "application/json" },
-        body: JSON.stringify({ promotion_id: a.promotionId, promotion_type: a.promotionType, accion: a.accion, items: tanda }),
+        body: JSON.stringify(payload),
       }, TIMEOUT_TANDA_MS)
         .then(function (res) {
           if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error en tanda");
           logAcumulado = logAcumulado.concat(res.data.log || []);
           exitosos += res.data.exitosos || 0;
           errores += res.data.errores || 0;
+          revisar += res.data.revisar || 0;
           indice++;
           els.resultadoResumen.textContent = "Procesando " + logAcumulado.length + "/" + itemsTotal.length + "...";
           renderTablaLog(logAcumulado, a.accion);
@@ -922,12 +935,31 @@
     ejecutarEnTandas(ctx.a, itemsFallidos);
   });
 
+  els.btnUsarSugerido.addEventListener("click", function () {
+    if (!ultimoContextoTanda) return;
+    var ctx = ultimoContextoTanda;
+    var idsRevisar = {};
+    ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR" && l.sugerido != null) idsRevisar[l.item_id] = true; });
+    var itemsRevisar = ctx.itemsTotal.filter(function (it) { return idsRevisar[it.id]; });
+    if (itemsRevisar.length === 0) return;
+    ejecutarEnTandas(ctx.a, itemsRevisar, "sugerido");
+  });
+
   function renderTablaLog(log, accion) {
     var filas = log.map(function (l) {
-      var esError = l.estado === "ERROR";
-      var extra = esError
-        ? '<span style="color:var(--err); font-size:0.72rem;">' + escapeHtml(textoError(l.detalle)) + '</span>'
-        : (accion === "subir" && l.precio_aplicado ? ("$" + l.precio_aplicado) : "");
+      var extra = "";
+      if (l.estado === "ERROR") {
+        extra = '<span style="color:var(--err); font-size:0.72rem;">' + escapeHtml(textoError(l.detalle)) + '</span>';
+      } else if (l.estado === "REVISAR") {
+        var partes = [];
+        if (l.porcentaje_pedido != null) partes.push(l.porcentaje_pedido + "% pedido → $" + l.precio_pedido);
+        if (l.piso) partes.push("piso $" + l.piso);
+        if (l.techo) partes.push("techo $" + l.techo);
+        if (l.sugerido) partes.push("sugerido ML $" + l.sugerido);
+        extra = '<span style="color:var(--amber); font-size:0.72rem;">' + escapeHtml(partes.join(" · ")) + '</span>';
+      } else if (accion === "subir" && l.precio_aplicado) {
+        extra = "$" + l.precio_aplicado + (l.porcentaje != null ? " (" + l.porcentaje + "%)" : "");
+      }
       return "<tr><td>" + escapeHtml(l.item_id) + "</td><td>" + escapeHtml(l.sku || "—") + "</td>" +
         "<td><span class='tag-log " + escapeHtml(l.estado) + "'>" + escapeHtml(l.estado) + "</span></td><td>" + extra + "</td></tr>";
     }).join("");
@@ -938,6 +970,7 @@
     els.resultadoTitulo.textContent = accion === "subir" ? "Resultado — Subir a todas" : "Resultado — Bajar de todas";
     els.resultadoResumen.textContent = total === 0 ? "No había nada para procesar." : (total + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.");
     els.btnReintentarFallidos.classList.add("oculto");
+    els.btnUsarSugerido.classList.add("oculto");
     renderTablaLog((data && data.log) || [], accion);
     els.modalResultado.classList.remove("oculto");
   }
