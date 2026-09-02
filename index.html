@@ -341,6 +341,13 @@
     <h2 id="resultadoTitulo">Resultado</h2>
     <p id="resultadoResumen"></p>
     <div id="resultadoTablaWrap"></div>
+
+    <div id="bloqueAplicarPctRevisar" class="oculto" style="margin-top:14px; padding-top:14px; border-top:1px solid var(--panel-border); display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <label style="margin:0; white-space:nowrap;">Aplicar % a las de "REVISAR":</label>
+      <input type="number" id="inputPctRevisar" min="1" max="99" step="0.1" style="width:80px;">
+      <button class="chico secondary" id="btnAplicarPctRevisar">Aplicar</button>
+    </div>
+
     <div class="modal-cerrar" style="justify-content:space-between;">
       <div style="display:flex; gap:8px;">
         <button class="secondary oculto" id="btnReintentarFallidos">Reintentar fallidos</button>
@@ -447,6 +454,9 @@
     btnCerrarResultado: document.getElementById("btnCerrarResultado"),
     btnReintentarFallidos: document.getElementById("btnReintentarFallidos"),
     btnUsarSugerido: document.getElementById("btnUsarSugerido"),
+    bloqueAplicarPctRevisar: document.getElementById("bloqueAplicarPctRevisar"),
+    inputPctRevisar: document.getElementById("inputPctRevisar"),
+    btnAplicarPctRevisar: document.getElementById("btnAplicarPctRevisar"),
   };
 
   /* ============================================================
@@ -990,6 +1000,8 @@
     els.resultadoTablaWrap.innerHTML = "";
     els.btnReintentarFallidos.classList.add("oculto");
     els.btnUsarSugerido.classList.add("oculto");
+    els.bloqueAplicarPctRevisar.classList.add("oculto");
+    els.inputPctRevisar.value = "";
     els.modalResultado.classList.remove("oculto");
 
     function siguienteTanda() {
@@ -1003,6 +1015,7 @@
         ultimoContextoTanda = { a: a, itemsTotal: itemsTotal, logAcumulado: logAcumulado };
         els.btnReintentarFallidos.classList.toggle("oculto", errores === 0);
         els.btnUsarSugerido.classList.toggle("oculto", revisar === 0);
+        els.bloqueAplicarPctRevisar.classList.toggle("oculto", revisar === 0);
 
         els.btnConfirmarAccion.disabled = false;
         accionPendiente = null;
@@ -1056,14 +1069,34 @@
     ejecutarEnTandas(ctx.a, itemsFallidos, { pctConfig: ctx.a.pctConfig });
   });
 
+  function itemsEnRevision(ctx) {
+    var ids = {};
+    ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR") ids[l.item_id] = true; });
+    return ctx.itemsTotal.filter(function (it) { return ids[it.id]; });
+  }
+
   els.btnUsarSugerido.addEventListener("click", function () {
     if (!ultimoContextoTanda) return;
     var ctx = ultimoContextoTanda;
-    var idsRevisar = {};
-    ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR" && l.sugerido != null) idsRevisar[l.item_id] = true; });
-    var itemsRevisar = ctx.itemsTotal.filter(function (it) { return idsRevisar[it.id]; });
+    var idsConSugerido = {};
+    ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR" && l.sugerido != null) idsConSugerido[l.item_id] = true; });
+    var itemsRevisar = ctx.itemsTotal.filter(function (it) { return idsConSugerido[it.id]; });
     if (itemsRevisar.length === 0) return;
     ejecutarEnTandas(ctx.a, itemsRevisar, { modoPrecio: "sugerido" });
+  });
+
+  els.btnAplicarPctRevisar.addEventListener("click", function () {
+    if (!ultimoContextoTanda) return;
+    var pct = Number(els.inputPctRevisar.value);
+    if (!pct || pct <= 0 || pct >= 100) {
+      els.inputPctRevisar.style.borderColor = "var(--err)";
+      return;
+    }
+    els.inputPctRevisar.style.borderColor = "";
+    var ctx = ultimoContextoTanda;
+    var itemsRevisar = itemsEnRevision(ctx);
+    if (itemsRevisar.length === 0) return;
+    ejecutarEnTandas(ctx.a, itemsRevisar, { pctConfig: { porcentaje_base: pct, excepciones: [] } });
   });
 
   function renderTablaLog(log, accion) {
@@ -1097,6 +1130,7 @@
     els.resultadoResumen.textContent = total === 0 ? "No había nada para procesar." : (total + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.");
     els.btnReintentarFallidos.classList.add("oculto");
     els.btnUsarSugerido.classList.add("oculto");
+    els.bloqueAplicarPctRevisar.classList.add("oculto");
     renderTablaLog((data && data.log) || [], accion);
     els.modalResultado.classList.remove("oculto");
   }
