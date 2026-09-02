@@ -671,6 +671,7 @@
 
     els.gridTipos.querySelectorAll("[data-ver-conteo]").forEach(function (btn) {
       btn.addEventListener("click", function () { cargarConteo(btn); });
+      cargarConteo(btn); // auto: para ver de una si hay publicaciones subidas, sin tener que clickear
     });
   }
 
