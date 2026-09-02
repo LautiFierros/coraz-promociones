@@ -557,7 +557,6 @@
       .then(function (res) {
         if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
         els.inputDefault.value = res.data.default;
-        defaultPctCache = res.data.default;
         renderListaSkus(res.data.skus || []);
         els.estadoConfig.textContent = "";
       })
@@ -781,12 +780,11 @@
      MODAL: % base + excepciones por SKU (se pregunta cada vez que se sube)
      ============================================================ */
   var pctPendiente = null; // { promotionId, promotionType, nombre }
-  var defaultPctCache = 15; // se actualiza solo si abriste el panel de configuración general
 
   function abrirModalPorcentaje(promotionId, promotionType, nombre) {
     pctPendiente = { promotionId: promotionId, promotionType: promotionType, nombre: nombre };
     els.porcentajeNombreCampana.textContent = nombre;
-    els.inputPctBase.value = defaultPctCache;
+    els.inputPctBase.value = "";
     els.excepcionesLista.innerHTML = "";
     els.estadoPorcentaje.textContent = "";
     els.modalPorcentaje.classList.remove("oculto");
