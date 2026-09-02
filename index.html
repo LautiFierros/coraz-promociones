@@ -156,6 +156,8 @@
   table.log { width: 100%; border-collapse: collapse; font-size: 0.78rem; margin-top: 10px; }
   table.log th, table.log td { text-align: left; padding: 6px 8px; border-bottom: 1px solid var(--panel-border); }
   table.log th { color: var(--text-dim); font-weight: 600; }
+  table.log th[data-sort]:hover { color: var(--amber); }
+  table.log th[data-sort].activo { color: var(--amber); }
   .tag-log { font-size: 0.68rem; font-weight: 700; padding: 2px 6px; border-radius: 4px; }
   .tag-log.APLICADO, .tag-log.REMOVIDO { background: var(--ok-soft); color: var(--ok); }
   .tag-log.ERROR { background: var(--err-soft); color: var(--err); }
@@ -217,6 +219,17 @@
       <button class="secondary chico" id="btnLogout">Salir</button>
     </div>
   </header>
+
+  <!-- Acciones globales: bajar/subir todo (para actualizaciones masivas de precio) -->
+  <div class="panel" style="border-color:#5a3a1a;">
+    <label style="margin:0; color:var(--amber); font-weight:600;">⚠️ Acciones globales</label>
+    <p style="font-size:0.8rem; color:var(--text-dim); margin:6px 0 12px;">Para cuando necesitás actualizar precios masivamente: bajás todas las promos activas (guarda el % de cada una), actualizás precios en ML, y después las volvés a subir con esos mismos %.</p>
+    <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+      <button class="danger chico" id="btnBajarTodo">⬇️ Bajar TODAS las promociones</button>
+      <button class="chico oculto" id="btnSubirTodoGuardado">⬆️ Subir TODAS (con los % guardados)</button>
+      <span id="estadoSnapshot" class="estado" style="margin:0;"></span>
+    </div>
+  </div>
 
   <!-- Config de % por SKU -->
   <div class="panel">
@@ -324,6 +337,62 @@
 </div>
 
 <!-- ============================================================
+     MODAL: Bajar TODAS -- paso 1 (resumen)
+     ============================================================ -->
+<div id="modalBajarTodo1" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2>⚠️ ¿Bajar TODAS las promociones?</h2>
+    <p id="bajarTodoResumen1"></p>
+    <div id="bajarTodoListaGrupos" style="font-size:0.82rem; color:var(--text-dim); max-height:200px; overflow-y:auto;"></div>
+    <p style="font-size:0.8rem; color:var(--text-dim);">Antes de bajar nada se guarda el % que tenía cada publicación, para poder reaplicarlas después con "Subir TODAS (con los % guardados)".</p>
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary" id="btnCancelarBajarTodo1">Cancelar</button>
+      <button class="danger" id="btnContinuarBajarTodo1">Continuar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: Bajar TODAS -- paso 2 (confirmación dura)
+     ============================================================ -->
+<div id="modalBajarTodo2" class="modal-fondo oculto">
+  <div class="modal-caja">
+    <h2>Última confirmación</h2>
+    <p>Esta acción saca publicaciones reales de promociones reales en Mercado Libre. Para confirmar, escribí <b>BAJAR TODO</b> en el campo:</p>
+    <input type="text" id="inputConfirmarBajarTodo" style="width:100%; margin-bottom:10px;" autocomplete="off">
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary" id="btnCancelarBajarTodo2">Cancelar</button>
+      <button class="danger" id="btnConfirmarBajarTodo2" disabled>Confirmar y bajar todo</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: % aplicados por campaña (editable, ordenable)
+     ============================================================ -->
+<div id="modalPctAplicados" class="modal-fondo oculto">
+  <div class="modal-caja" style="max-width:720px;">
+    <h2>% aplicados — <span id="pctAplicadosNombreCampana"></span></h2>
+    <div id="pctAplicadosEstado" class="estado"></div>
+    <div style="overflow-x:auto;">
+      <table class="log" id="tablaPctAplicados">
+        <thead>
+          <tr>
+            <th data-sort="id" style="cursor:pointer;">MLA</th>
+            <th data-sort="original_price" style="cursor:pointer;">Precio lista</th>
+            <th data-sort="pct" style="cursor:pointer;">% aplicado</th>
+            <th data-sort="price" style="cursor:pointer;">Precio actual</th>
+            <th>Editar %</th>
+          </tr>
+        </thead>
+        <tbody id="tablaPctAplicadosBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-cerrar"><button id="btnCerrarPctAplicados">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- ============================================================
      MODAL: Confirmación de acción en bloque
      ============================================================ -->
 <div id="modalConfirmar" class="modal-fondo oculto">
@@ -375,6 +444,7 @@
   var URL_DIAG = FN_BASE + "/ml-promos-diag";
   var URL_BULK = FN_BASE + "/ml-promos-bulk";
   var URL_DESCUENTOS = FN_BASE + "/ml-promos-descuentos-crud";
+  var URL_SNAPSHOT = FN_BASE + "/ml-promos-snapshot-crud";
   var TIMEOUT_MS = 20000;
 
   // Los 12 tipos de /seller-promotions. subir/bajar controlan si el tipo tiene
@@ -439,6 +509,23 @@
     btnAgregarSku: document.getElementById("btnAgregarSku"),
     estadoConfig: document.getElementById("estadoConfig"),
     modalConfirmar: document.getElementById("modalConfirmar"),
+    btnBajarTodo: document.getElementById("btnBajarTodo"),
+    btnSubirTodoGuardado: document.getElementById("btnSubirTodoGuardado"),
+    estadoSnapshot: document.getElementById("estadoSnapshot"),
+    modalBajarTodo1: document.getElementById("modalBajarTodo1"),
+    bajarTodoResumen1: document.getElementById("bajarTodoResumen1"),
+    bajarTodoListaGrupos: document.getElementById("bajarTodoListaGrupos"),
+    btnCancelarBajarTodo1: document.getElementById("btnCancelarBajarTodo1"),
+    btnContinuarBajarTodo1: document.getElementById("btnContinuarBajarTodo1"),
+    modalBajarTodo2: document.getElementById("modalBajarTodo2"),
+    inputConfirmarBajarTodo: document.getElementById("inputConfirmarBajarTodo"),
+    btnCancelarBajarTodo2: document.getElementById("btnCancelarBajarTodo2"),
+    btnConfirmarBajarTodo2: document.getElementById("btnConfirmarBajarTodo2"),
+    modalPctAplicados: document.getElementById("modalPctAplicados"),
+    pctAplicadosNombreCampana: document.getElementById("pctAplicadosNombreCampana"),
+    pctAplicadosEstado: document.getElementById("pctAplicadosEstado"),
+    tablaPctAplicadosBody: document.getElementById("tablaPctAplicadosBody"),
+    btnCerrarPctAplicados: document.getElementById("btnCerrarPctAplicados"),
     modalPorcentaje: document.getElementById("modalPorcentaje"),
     porcentajeNombreCampana: document.getElementById("porcentajeNombreCampana"),
     inputPctBase: document.getElementById("inputPctBase"),
@@ -641,6 +728,7 @@
     els.estadoCarga.textContent = "Cargando promociones activas...";
     els.estadoCarga.className = "estado";
     els.gridTipos.innerHTML = "";
+    cargarEstadoSnapshot();
 
     fetchConTimeout(URL_DIAG, { headers: { Authorization: AUTH } })
       .then(function (res) {
@@ -688,6 +776,12 @@
     els.gridTipos.querySelectorAll("[data-ver-conteo]").forEach(function (btn) {
       btn.addEventListener("click", function () { cargarConteo(btn); });
       cargarConteo(btn); // auto: para ver de una si hay publicaciones subidas, sin tener que clickear
+    });
+
+    els.gridTipos.querySelectorAll("[data-ver-pct]").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        abrirModalPctAplicados(btn.getAttribute("data-promotion-id"), btn.getAttribute("data-promotion-type"), btn.getAttribute("data-nombre"));
+      });
     });
   }
 
@@ -773,6 +867,7 @@
         '<div class="instancia-acciones oculto" data-botones-de="' + idSeguro + '">' +
           (tipo.subir ? '<button class="chico" data-accion="subir" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Subir a todas</button>' : "") +
           (tipo.bajar ? '<button class="chico danger" data-accion="bajar" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Bajar de todas</button>' : "") +
+          (TIPOS_NECESITAN_PRECIO.indexOf(tipo.codigo) !== -1 ? '<button class="chico secondary" data-ver-pct data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Ver % aplicados</button>' : "") +
         '</div>';
     }
 
@@ -1173,6 +1268,429 @@
   }
 
   els.btnCerrarResultado.addEventListener("click", function () { els.modalResultado.classList.add("oculto"); });
+
+  /* ============================================================
+     MODAL: % aplicados por campaña (editable, ordenable)
+     ============================================================ */
+  var pctAplicadosContexto = null; // { promotionId, promotionType }
+  var pctAplicadosOrden = { campo: "id", asc: true };
+
+  function abrirModalPctAplicados(promotionId, promotionType, nombre) {
+    pctAplicadosContexto = { promotionId: promotionId, promotionType: promotionType };
+    els.pctAplicadosNombreCampana.textContent = nombre;
+    pctAplicadosOrden = { campo: "id", asc: true };
+
+    var estado = promoItemsState[promotionId];
+    if (!estado || !estado.activos) {
+      els.pctAplicadosEstado.textContent = "Todavía no se cargaron las publicaciones activas de esta campaña — esperá un segundo y volvé a abrir.";
+      els.pctAplicadosEstado.className = "estado err";
+      els.tablaPctAplicadosBody.innerHTML = "";
+      els.modalPctAplicados.classList.remove("oculto");
+      return;
+    }
+
+    els.pctAplicadosEstado.textContent = estado.activos.length === 0 ? "No hay publicaciones activas en esta campaña." : "";
+    els.pctAplicadosEstado.className = "estado";
+    renderTablaPctAplicados(estado.activos);
+    els.modalPctAplicados.classList.remove("oculto");
+  }
+
+  function renderTablaPctAplicados(activos) {
+    var campo = pctAplicadosOrden.campo;
+    var asc = pctAplicadosOrden.asc;
+
+    var filas = activos.map(function (it) {
+      var pct = it.original_price > 0 ? Math.round((1 - it.price / it.original_price) * 1000) / 10 : 0;
+      return { id: it.id, original_price: it.original_price, price: it.price, min_discounted_price: it.min_discounted_price, max_discounted_price: it.max_discounted_price, pct: pct };
+    });
+
+    filas.sort(function (a, b) {
+      var va = a[campo], vb = b[campo];
+      if (typeof va === "string") { va = va.toLowerCase(); vb = vb.toLowerCase(); }
+      if (va < vb) return asc ? -1 : 1;
+      if (va > vb) return asc ? 1 : -1;
+      return 0;
+    });
+
+    els.tablaPctAplicadosBody.innerHTML = filas.map(function (f) {
+      return "<tr data-fila-item='" + escapeHtml(f.id) + "'>" +
+        "<td>" + escapeHtml(f.id) + "</td>" +
+        "<td>$" + f.original_price + "</td>" +
+        "<td class='celda-pct'>" + f.pct + "%</td>" +
+        "<td class='celda-precio'>$" + f.price + "</td>" +
+        "<td style='display:flex; gap:6px; align-items:center;'>" +
+          "<input type='number' class='input-editar-pct' value='" + f.pct + "' min='1' max='99' step='0.1' style='width:70px;'>" +
+          "<button class='chico secondary btn-guardar-pct'>Guardar</button>" +
+        "</td>" +
+      "</tr>";
+    }).join("");
+
+    els.tablaPctAplicadosBody.querySelectorAll(".btn-guardar-pct").forEach(function (btn) {
+      btn.addEventListener("click", function () {
+        var tr = btn.closest("tr");
+        var itemId = tr.getAttribute("data-fila-item");
+        var input = tr.querySelector(".input-editar-pct");
+        var nuevoPct = Number(input.value);
+        var filaData = filas.filter(function (f) { return f.id === itemId; })[0];
+        guardarPctFila(itemId, nuevoPct, tr, filaData);
+      });
+    });
+  }
+
+  document.querySelectorAll("#tablaPctAplicados th[data-sort]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var campo = th.getAttribute("data-sort");
+      if (pctAplicadosOrden.campo === campo) {
+        pctAplicadosOrden.asc = !pctAplicadosOrden.asc;
+      } else {
+        pctAplicadosOrden = { campo: campo, asc: true };
+      }
+      document.querySelectorAll("#tablaPctAplicados th[data-sort]").forEach(function (t) { t.classList.remove("activo"); });
+      th.classList.add("activo");
+      var estado = pctAplicadosContexto ? promoItemsState[pctAplicadosContexto.promotionId] : null;
+      if (estado && estado.activos) renderTablaPctAplicados(estado.activos);
+    });
+  });
+
+  function guardarPctFila(itemId, nuevoPct, tr, filaData) {
+    if (!pctAplicadosContexto || !filaData) return;
+    if (!nuevoPct || nuevoPct <= 0 || nuevoPct >= 100) {
+      tr.querySelector(".input-editar-pct").style.borderColor = "var(--err)";
+      return;
+    }
+    tr.querySelector(".input-editar-pct").style.borderColor = "";
+    var btn = tr.querySelector(".btn-guardar-pct");
+    btn.disabled = true;
+    btn.textContent = "...";
+
+    var item = {
+      id: itemId, original_price: filaData.original_price,
+      min_discounted_price: filaData.min_discounted_price, max_discounted_price: filaData.max_discounted_price,
+      porcentaje_item: nuevoPct,
+    };
+
+    fetchConTimeout(URL_BULK, {
+      method: "POST",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ promotion_id: pctAplicadosContexto.promotionId, promotion_type: pctAplicadosContexto.promotionType, accion: "subir", items: [item], porcentaje_base: nuevoPct, excepciones: [] }),
+    }, TIMEOUT_TANDA_MS)
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
+        var log0 = (res.data.log || [])[0];
+        if (!log0) throw new Error("sin respuesta");
+
+        if (log0.estado === "APLICADO") {
+          var estado = promoItemsState[pctAplicadosContexto.promotionId];
+          if (estado) {
+            estado.activos = estado.activos.map(function (it) {
+              return it.id === itemId ? Object.assign({}, it, { price: log0.precio_aplicado }) : it;
+            });
+          }
+          tr.querySelector(".celda-pct").textContent = log0.porcentaje + "%";
+          tr.querySelector(".celda-precio").textContent = "$" + log0.precio_aplicado;
+          btn.textContent = "Guardado ✓";
+          setTimeout(function () { btn.textContent = "Guardar"; btn.disabled = false; }, 1500);
+        } else if (log0.estado === "REVISAR") {
+          btn.textContent = "Guardar";
+          btn.disabled = false;
+          alert("Ese % queda fuera de rango. Válido entre " + (log0.porcentaje_minimo != null ? log0.porcentaje_minimo : "?") + "% y " + (log0.porcentaje_maximo != null ? log0.porcentaje_maximo : "?") + "%. Sugerido ML: $" + log0.sugerido);
+        } else {
+          btn.textContent = "Guardar";
+          btn.disabled = false;
+          alert("Error: " + textoError(log0.detalle));
+        }
+      })
+      .catch(function (err) {
+        btn.textContent = "Guardar";
+        btn.disabled = false;
+        alert("Error: " + err.message);
+      });
+  }
+
+  els.btnCerrarPctAplicados.addEventListener("click", function () { els.modalPctAplicados.classList.add("oculto"); });
+
+  /* ============================================================
+     ACCIONES GLOBALES: Bajar TODAS / Subir TODAS (con % guardados)
+     ============================================================ */
+  var gruposBajarPendiente = null;
+
+  function recolectarGruposBajables() {
+    var grupos = [];
+    ultimasPromosActivas.forEach(function (p) {
+      var tipoCfg = null;
+      for (var i = 0; i < TIPOS.length; i++) { if (TIPOS[i].codigo === p.type) { tipoCfg = TIPOS[i]; break; } }
+      if (!tipoCfg || !tipoCfg.bajar || !p.id) return;
+      var estado = promoItemsState[p.id];
+      if (!estado || !estado.activos || estado.activos.length === 0) return;
+      grupos.push({ promotionId: p.id, promotionType: p.type, nombre: p.name || p.id, items: estado.activos });
+    });
+    return grupos;
+  }
+
+  els.btnBajarTodo.addEventListener("click", function () {
+    var grupos = recolectarGruposBajables();
+    if (grupos.length === 0) {
+      alert("No hay publicaciones activas en campañas que soporten \"bajar\" ahora mismo.");
+      return;
+    }
+    var totalItems = grupos.reduce(function (s, g) { return s + g.items.length; }, 0);
+    els.bajarTodoResumen1.textContent = "Esto va a sacar " + totalItems + " publicaciones de " + grupos.length + " campaña(s):";
+    els.bajarTodoListaGrupos.innerHTML = grupos.map(function (g) {
+      return "<div>• " + escapeHtml(g.nombre) + " — " + g.items.length + " publicaciones</div>";
+    }).join("");
+    gruposBajarPendiente = grupos;
+    els.modalBajarTodo1.classList.remove("oculto");
+  });
+
+  els.btnCancelarBajarTodo1.addEventListener("click", function () {
+    gruposBajarPendiente = null;
+    els.modalBajarTodo1.classList.add("oculto");
+  });
+
+  els.btnContinuarBajarTodo1.addEventListener("click", function () {
+    els.modalBajarTodo1.classList.add("oculto");
+    els.inputConfirmarBajarTodo.value = "";
+    els.btnConfirmarBajarTodo2.disabled = true;
+    els.modalBajarTodo2.classList.remove("oculto");
+  });
+
+  els.inputConfirmarBajarTodo.addEventListener("input", function () {
+    els.btnConfirmarBajarTodo2.disabled = els.inputConfirmarBajarTodo.value.trim() !== "BAJAR TODO";
+  });
+
+  els.btnCancelarBajarTodo2.addEventListener("click", function () {
+    gruposBajarPendiente = null;
+    els.modalBajarTodo2.classList.add("oculto");
+  });
+
+  els.btnConfirmarBajarTodo2.addEventListener("click", function () {
+    if (!gruposBajarPendiente) return;
+    var grupos = gruposBajarPendiente;
+    gruposBajarPendiente = null;
+    els.modalBajarTodo2.classList.add("oculto");
+
+    var filas = [];
+    grupos.forEach(function (g) {
+      g.items.forEach(function (it) {
+        var pct = it.original_price > 0 ? Math.round((1 - it.price / it.original_price) * 1000) / 10 : 0;
+        filas.push({ item_id: it.id, promotion_id: g.promotionId, promotion_type: g.promotionType, porcentaje: pct, precio_original: it.original_price });
+      });
+    });
+
+    fetchConTimeout(URL_SNAPSHOT, {
+      method: "POST",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ filas: filas }),
+    })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error guardando el respaldo");
+        ejecutarBajaGlobal(grupos);
+      })
+      .catch(function (err) {
+        alert("No se pudo guardar el respaldo de % — se cancela para no perder esa info. " + err.message);
+      });
+  });
+
+  function ejecutarBajaGlobal(grupos) {
+    var logGlobal = [];
+    var exitosos = 0, errores = 0;
+    var totalItems = grupos.reduce(function (s, g) { return s + g.items.length; }, 0);
+    var procesados = 0;
+    var gi = 0;
+
+    els.resultadoTitulo.textContent = "Bajando TODAS las promociones...";
+    els.resultadoResumen.textContent = "Procesando 0/" + totalItems + "...";
+    els.resultadoTablaWrap.innerHTML = "";
+    els.btnReintentarFallidos.classList.add("oculto");
+    els.btnUsarSugerido.classList.add("oculto");
+    els.bloqueAplicarPctRevisar.classList.add("oculto");
+    els.modalResultado.classList.remove("oculto");
+
+    function siguienteGrupo() {
+      if (gi >= grupos.length) {
+        els.resultadoTitulo.textContent = "Resultado — Bajar TODAS las promociones";
+        els.resultadoResumen.textContent = totalItems + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error.";
+        renderTablaLog(logGlobal, "bajar");
+        cargarEstadoSnapshot();
+        arrancarApp();
+        return;
+      }
+      var grupo = grupos[gi];
+      var tandas = chunk(grupo.items, BATCH_SIZE);
+      var ti = 0;
+      function siguienteTandaGrupo() {
+        if (ti >= tandas.length) { gi++; siguienteGrupo(); return; }
+        var tanda = tandas[ti];
+        fetchConTimeout(URL_BULK, {
+          method: "POST",
+          headers: { Authorization: AUTH, "Content-Type": "application/json" },
+          body: JSON.stringify({ promotion_id: grupo.promotionId, promotion_type: grupo.promotionType, accion: "bajar", items: tanda }),
+        }, TIMEOUT_TANDA_MS)
+          .then(function (res) {
+            if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error en tanda");
+            logGlobal = logGlobal.concat(res.data.log || []);
+            exitosos += res.data.exitosos || 0;
+            errores += res.data.errores || 0;
+            procesados += tanda.length;
+            els.resultadoResumen.textContent = "Procesando " + procesados + "/" + totalItems + " (" + grupo.nombre + ")...";
+            renderTablaLog(logGlobal, "bajar");
+            ti++;
+            siguienteTandaGrupo();
+          })
+          .catch(function (err) {
+            els.resultadoTitulo.textContent = "Se cortó a mitad de camino";
+            els.resultadoResumen.textContent = procesados + "/" + totalItems + " procesadas antes del error (" + err.message + "). El respaldo de % ya está guardado — podés usar \"Subir TODAS (con los % guardados)\" cuando quieras para terminar.";
+            renderTablaLog(logGlobal, "bajar");
+          });
+      }
+      siguienteTandaGrupo();
+    }
+
+    siguienteGrupo();
+  }
+
+  function cargarEstadoSnapshot() {
+    fetchConTimeout(URL_SNAPSHOT, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) return;
+        var filas = res.data.filas || [];
+        if (filas.length > 0) {
+          els.btnSubirTodoGuardado.classList.remove("oculto");
+          els.estadoSnapshot.textContent = filas.length + " publicaciones esperando volver a subirse.";
+          els.estadoSnapshot.className = "estado";
+        } else {
+          els.btnSubirTodoGuardado.classList.add("oculto");
+          els.estadoSnapshot.textContent = "";
+        }
+      })
+      .catch(function () { /* no crítico */ });
+  }
+
+  els.btnSubirTodoGuardado.addEventListener("click", function () {
+    els.btnSubirTodoGuardado.disabled = true;
+    fetchConTimeout(URL_SNAPSHOT, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error");
+        var filas = res.data.filas || [];
+        if (filas.length === 0) { alert("No hay nada guardado para reaplicar."); return; }
+
+        var grupos = {};
+        filas.forEach(function (f) {
+          var key = f.promotion_id + "||" + f.promotion_type;
+          if (!grupos[key]) grupos[key] = { promotionId: f.promotion_id, promotionType: f.promotion_type, filas: [] };
+          grupos[key].filas.push(f);
+        });
+
+        var listaGrupos = Object.keys(grupos).map(function (k) { return grupos[k]; });
+        if (!confirm("Se van a reaplicar " + filas.length + " publicaciones con el % que tenían guardado, en " + listaGrupos.length + " campaña(s). ¿Continuar?")) return;
+
+        prepararYEjecutarRestore(listaGrupos);
+      })
+      .catch(function (err) { alert("Error leyendo el respaldo: " + err.message); })
+      .finally(function () { els.btnSubirTodoGuardado.disabled = false; });
+  });
+
+  function prepararYEjecutarRestore(gruposSnapshot) {
+    var promesas = gruposSnapshot.map(function (g) {
+      var url = URL_BULK + "?promotion_id=" + encodeURIComponent(g.promotionId) + "&promotion_type=" + encodeURIComponent(g.promotionType);
+      return fetchConTimeout(url, { headers: { Authorization: AUTH } }).then(function (res) {
+        var candidatosPorId = {};
+        if (res.data && res.data.ok) {
+          (res.data.items_candidatos || []).forEach(function (it) { candidatosPorId[it.id] = it; });
+        }
+        var items = [];
+        var idsSnapshotPorItemId = {};
+        g.filas.forEach(function (f) {
+          idsSnapshotPorItemId[f.item_id] = f.id;
+          var base = candidatosPorId[f.item_id];
+          if (!base) return; // ya no aparece como candidato -- se salta, queda en el respaldo para revisar a mano
+          items.push({ id: base.id, original_price: base.original_price, min_discounted_price: base.min_discounted_price, max_discounted_price: base.max_discounted_price, porcentaje_item: f.porcentaje });
+        });
+        return { promotionId: g.promotionId, promotionType: g.promotionType, nombre: g.promotionId, items: items, idsSnapshotPorItemId: idsSnapshotPorItemId };
+      });
+    });
+
+    Promise.all(promesas).then(function (preparados) {
+      ejecutarSubidaGlobal(preparados.filter(function (p) { return p.items.length > 0; }));
+    });
+  }
+
+  function ejecutarSubidaGlobal(grupos) {
+    if (grupos.length === 0) {
+      alert("Ninguna de las publicaciones guardadas aparece como candidata ahora mismo — revisalas a mano (puede que ya no tengan la invitación vigente).");
+      return;
+    }
+
+    var logGlobal = [];
+    var exitosos = 0, errores = 0, revisar = 0;
+    var idsSnapshotExitosos = [];
+    var totalItems = grupos.reduce(function (s, g) { return s + g.items.length; }, 0);
+    var procesados = 0;
+    var gi = 0;
+
+    els.resultadoTitulo.textContent = "Subiendo TODAS (con % guardados)...";
+    els.resultadoResumen.textContent = "Procesando 0/" + totalItems + "...";
+    els.resultadoTablaWrap.innerHTML = "";
+    els.btnReintentarFallidos.classList.add("oculto");
+    els.btnUsarSugerido.classList.add("oculto");
+    els.bloqueAplicarPctRevisar.classList.add("oculto");
+    els.modalResultado.classList.remove("oculto");
+
+    function siguienteGrupo() {
+      if (gi >= grupos.length) {
+        els.resultadoTitulo.textContent = "Resultado — Subir TODAS (con % guardados)";
+        els.resultadoResumen.textContent = totalItems + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error, " + revisar + " en revisión.";
+        renderTablaLog(logGlobal, "subir");
+
+        if (idsSnapshotExitosos.length > 0) {
+          fetchConTimeout(URL_SNAPSHOT + "?ids=" + idsSnapshotExitosos.join(","), { method: "DELETE", headers: { Authorization: AUTH } })
+            .catch(function () { /* si falla el borrado del respaldo no es grave, quedan filas viejas */ })
+            .finally(function () { cargarEstadoSnapshot(); arrancarApp(); });
+        } else {
+          cargarEstadoSnapshot();
+          arrancarApp();
+        }
+        return;
+      }
+      var grupo = grupos[gi];
+      var tandas = chunk(grupo.items, BATCH_SIZE);
+      var ti = 0;
+      function siguienteTandaGrupo() {
+        if (ti >= tandas.length) { gi++; siguienteGrupo(); return; }
+        var tanda = tandas[ti];
+        fetchConTimeout(URL_BULK, {
+          method: "POST",
+          headers: { Authorization: AUTH, "Content-Type": "application/json" },
+          body: JSON.stringify({ promotion_id: grupo.promotionId, promotion_type: grupo.promotionType, accion: "subir", items: tanda, porcentaje_base: 15, excepciones: [] }),
+        }, TIMEOUT_TANDA_MS)
+          .then(function (res) {
+            if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error en tanda");
+            logGlobal = logGlobal.concat(res.data.log || []);
+            exitosos += res.data.exitosos || 0;
+            errores += res.data.errores || 0;
+            revisar += res.data.revisar || 0;
+            (res.data.log || []).forEach(function (l) {
+              if (l.estado === "APLICADO" && grupo.idsSnapshotPorItemId[l.item_id]) {
+                idsSnapshotExitosos.push(grupo.idsSnapshotPorItemId[l.item_id]);
+              }
+            });
+            procesados += tanda.length;
+            els.resultadoResumen.textContent = "Procesando " + procesados + "/" + totalItems + " (" + grupo.nombre + ")...";
+            renderTablaLog(logGlobal, "subir");
+            ti++;
+            siguienteTandaGrupo();
+          })
+          .catch(function (err) {
+            els.resultadoTitulo.textContent = "Se cortó a mitad de camino";
+            els.resultadoResumen.textContent = procesados + "/" + totalItems + " procesadas antes del error (" + err.message + ").";
+            renderTablaLog(logGlobal, "subir");
+          });
+      }
+      siguienteTandaGrupo();
+    }
+
+    siguienteGrupo();
+  }
 })();
 </script>
 </body>
