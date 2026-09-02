@@ -283,14 +283,17 @@
     <h3>De dónde salen los datos</h3>
     <p>Se consulta en vivo la API de Mercado Libre (recurso <code>seller-promotions</code>) usando el mismo token que ya usan el resto de las apps de CORAZ. No hay copia local de las promociones — lo que ves es el estado real en ML en el momento de cargar la página.</p>
     <h3>Los 12 tipos de promoción</h3>
-    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones ("Campaña propia" y "Campaña tradicional") los controlás vos por completo: podés subir todas las publicaciones candidatas de una campaña con un clic, o bajarlas todas. El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo, pero todavía no se pueden gestionar en bloque desde acá (algunos ML los aplica automáticamente, como "Co-participación automática").</p>
+    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" hoy solo está disponible para "Campaña propia" y "Campaña tradicional". El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo, aunque algunos tipos ML los gestiona con poca intervención tuya (como la co-participación automática).</p>
     <h3>Subir a todas / Bajar de todas</h3>
-    <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que configuraste para cada SKU (o el default si no tiene uno propio). "Bajar de todas" saca las que están activas. Ambas acciones te muestran un detalle publicación por publicación al terminar.</p>
-    <h3>% de descuento por SKU</h3>
-    <p>Es la configuración que usa "Subir a todas" para calcular el precio de cada publicación. Se guarda en la base de CORAZ, no en Mercado Libre, así que podés ajustarla cuando quieras sin afectar nada hasta que vuelvas a apretar "Subir a todas".</p>
+    <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
+    <h3>% de descuento: se pregunta cada vez, por campaña</h3>
+    <p>Cuando apretás "Subir a todas" en una campaña con precio (Deal, Campaña propia, Oferta del día), la app te pide un <b>% base</b> para esa tanda puntual, y te deja agregar <b>excepciones por SKU</b> (tantas como quieras) que usan su propio % en vez del base. No es una configuración fija guardada — la definís de nuevo cada vez, campaña por campaña.</p>
+    <h3>¿Por qué a veces una publicación queda en "REVISAR"?</h3>
+    <p>Mercado Libre calcula, para cada publicación, un rango de precio que considera un descuento "creíble" — ni tan chico que parezca falso, ni tan grande que no se sostenga. Ese rango tiene un piso (<code>min_discounted_price</code>, el descuento más profundo permitido) y un techo (<code>max_discounted_price</code>, el descuento más chico que todavía cuenta como oferta real). Si el % que pediste da un precio fuera de ese rango, la app <b>no aplica nada solo</b> — la deja en estado "REVISAR" y te muestra el % mínimo y máximo que sí entran, más el precio que ML sugiere como alternativa. Vos decidís: ajustás el % (general o solo para ese SKU) y reintentás, o usás el botón "Usar precio sugerido de ML" para resolverlas rápido.</p>
     <div class="modal-cerrar"><button id="btnCerrarFuncionamiento">Cerrar</button></div>
   </div>
 </div>
+
 
 <!-- ============================================================
      MODAL: % base + excepciones por SKU (por campaña, cada vez que se sube)
