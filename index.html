@@ -868,7 +868,7 @@
         '<div class="instancia-acciones oculto" data-botones-de="' + idSeguro + '">' +
           (tipo.subir ? '<button class="chico" data-accion="subir" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Subir a todas</button>' : "") +
           (tipo.bajar ? '<button class="chico danger" data-accion="bajar" data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Bajar de todas</button>' : "") +
-          (TIPOS_NECESITAN_PRECIO.indexOf(tipo.codigo) !== -1 ? '<button class="chico secondary" data-ver-pct data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Ver % aplicados</button>' : "") +
+          '<button class="chico secondary" data-ver-pct data-promotion-id="' + idSeguro + '" data-promotion-type="' + tipo.codigo + '" data-nombre="' + escapeHtml(nombre) + '">Ver % aplicados</button>' +
         '</div>';
     }
 
@@ -1294,7 +1294,8 @@
       return;
     }
 
-    els.pctAplicadosEstado.textContent = estado.activos.length === 0 ? "No hay publicaciones activas en esta campaña." : "";
+    els.pctAplicadosEstado.textContent = estado.activos.length === 0 ? "No hay publicaciones activas en esta campaña."
+      : (TIPOS_NECESITAN_PRECIO.indexOf(promotionType) === -1 ? "Este tipo lo gestiona ML automáticamente — el % es solo informativo, no editable." : "");
     els.pctAplicadosEstado.className = "estado";
     renderTablaPctAplicados(estado.activos);
     els.modalPctAplicados.classList.remove("oculto");
@@ -1317,6 +1318,8 @@
       return 0;
     });
 
+    var editable = pctAplicadosContexto && TIPOS_NECESITAN_PRECIO.indexOf(pctAplicadosContexto.promotionType) !== -1;
+
     els.tablaPctAplicadosBody.innerHTML = filas.map(function (f) {
       return "<tr data-fila-item='" + escapeHtml(f.id) + "'>" +
         "<td>" + escapeHtml(f.id) + "</td>" +
@@ -1324,11 +1327,15 @@
         "<td class='celda-pct'>" + f.pct + "%</td>" +
         "<td class='celda-precio'>$" + f.price + "</td>" +
         "<td style='display:flex; gap:6px; align-items:center;'>" +
-          "<input type='number' class='input-editar-pct' value='" + f.pct + "' min='1' max='99' step='0.1' style='width:70px;'>" +
-          "<button class='chico secondary btn-guardar-pct'>Guardar</button>" +
+          (editable
+            ? "<input type='number' class='input-editar-pct' value='" + f.pct + "' min='1' max='99' step='0.1' style='width:70px;'>" +
+              "<button class='chico secondary btn-guardar-pct'>Guardar</button>"
+            : "<span style='color:var(--text-dim); font-size:0.75rem;'>gestiona ML</span>") +
         "</td>" +
       "</tr>";
     }).join("");
+
+    if (!editable) return;
 
     els.tablaPctAplicadosBody.querySelectorAll(".btn-guardar-pct").forEach(function (btn) {
       btn.addEventListener("click", function () {
