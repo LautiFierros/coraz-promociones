@@ -60,12 +60,12 @@
     border-radius: 12px; padding: 18px; margin-bottom: 16px;
   }
   label { display: block; font-size: 0.85rem; color: var(--text-dim); margin-bottom: 6px; }
-  input, select {
+  input, select, textarea {
     padding: 9px 11px; border-radius: 6px;
     border: 1px solid var(--panel-border); background: #0f0c08; color: var(--text);
     font-size: 0.88rem;
   }
-  input:focus, select:focus { outline: none; border-color: var(--amber-dim); }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--amber-dim); }
 
   button {
     background: var(--amber); color: #1a1408; border: none; border-radius: 6px;
@@ -224,9 +224,10 @@
   </header>
 
   <style>
-    .tabs-nav{display:flex;gap:6px;margin-bottom:16px;border-bottom:1px solid var(--panel-border);flex-wrap:wrap;}
-    .tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-dim);font-weight:600;padding:10px 14px;cursor:pointer;font-size:0.9rem;}
-    .tab-btn:hover{color:var(--amber);}
+    .tabs-nav{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--panel-border);flex-wrap:nowrap;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+    .tabs-nav::-webkit-scrollbar{display:none;}
+    .tab-btn{background:transparent;border:none;border-bottom:2px solid transparent;color:var(--text-dim);font-weight:600;padding:10px 12px;cursor:pointer;font-size:0.9rem;white-space:nowrap;flex:0 0 auto;border-radius:0;}
+    .tab-btn:hover,.tab-btn:focus,.tab-btn:active{color:var(--amber);background:transparent;box-shadow:none;}
     .tab-btn.activa{color:var(--amber);border-bottom-color:var(--amber);}
     .precios-textarea{width:100%;min-height:150px;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:0.85rem;resize:vertical;box-sizing:border-box;}
     .grilla-entrada{width:100%;border-collapse:collapse;font-size:0.85rem;max-width:520px;}
@@ -240,6 +241,48 @@
     .resumen-precios .kpi.clickable{cursor:pointer;user-select:none;transition:border-color .12s;}
     .resumen-precios .kpi.clickable:hover{border-color:var(--amber);}
     .resumen-precios .kpi.filtro-activo{border-color:var(--amber);box-shadow:inset 0 0 0 1px var(--amber);}
+    /* ---------- Módulo Tickets (.tk-*) — copiar tal cual al replicar en otra app ---------- */
+    .tk-titulo-panel{margin:0;color:var(--amber);font-weight:600;display:block;}
+    .tk-ayuda{font-size:0.78rem;color:var(--text-dim);margin:4px 0 10px;font-weight:400;}
+    .tk-form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+    @media (max-width:520px){.tk-form-grid{grid-template-columns:1fr;}}
+    #vistaTickets input[type=text],#vistaTickets textarea,#vistaTickets .tk-form-grid select,#modalTicket textarea,#modalTicket input[type=text],#modalTicket select{width:100%;box-sizing:border-box;}
+    #vistaTickets textarea,#modalTicket textarea{font-family:inherit;font-size:0.9rem;line-height:1.4;resize:vertical;}
+    .tk-check{display:flex;gap:8px;align-items:flex-start;font-size:0.8rem;margin:10px 0 4px;font-weight:400;cursor:pointer;}
+    .tk-check input{width:auto;margin-top:3px;}
+    .tk-acciones{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px;}
+    .tk-embudo-head{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+    .tk-toolbar{display:flex;gap:6px;flex-wrap:wrap;align-items:center;}
+    .tk-toolbar select,.tk-toolbar input{width:auto;min-width:120px;}
+    .tk-tabla tbody tr{cursor:pointer;transition:background .12s;}
+    .tk-tabla tbody tr:hover{background:var(--panel-2);}
+    .tk-badge{display:inline-block;font-size:0.68rem;font-weight:700;padding:2px 8px;border-radius:10px;white-space:nowrap;}
+    .tk-tipo-error{background:var(--err-soft);color:var(--err);}
+    .tk-tipo-mejora{background:var(--ok-soft);color:var(--ok);}
+    .tk-tipo-consulta{background:rgba(107,163,214,.15);color:var(--info);}
+    .tk-prio-urgente{background:var(--err);color:#fff;}
+    .tk-prio-alta{background:var(--err-soft);color:var(--err);}
+    .tk-prio-media{background:var(--amber-soft);color:var(--amber);}
+    .tk-prio-baja{background:var(--panel-2);color:var(--text-dim);}
+    .tk-est-pendiente{background:var(--amber-soft);color:var(--amber);}
+    .tk-est-en-revision{background:rgba(107,163,214,.15);color:var(--info);}
+    .tk-est-resuelto{background:var(--ok-soft);color:var(--ok);}
+    .tk-est-rechazado{background:var(--panel-2);color:var(--text-dim);}
+    .tk-app{font-size:0.7rem;color:var(--text-dim);white-space:nowrap;}
+    .tk-modal{max-width:680px;max-height:90vh;overflow-y:auto;}
+    .tk-meta{display:flex;gap:6px;flex-wrap:wrap;margin:6px 0 12px;font-size:0.75rem;color:var(--text-dim);align-items:center;}
+    .tk-detalle{white-space:pre-wrap;background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:10px 12px;font-size:0.85rem;}
+    .tk-contexto{margin:10px 0;font-size:0.78rem;color:var(--text-dim);}
+    .tk-contexto summary{cursor:pointer;}
+    .tk-contexto pre{white-space:pre-wrap;word-break:break-word;background:var(--bg);border:1px solid var(--panel-border);border-radius:6px;padding:8px;max-height:200px;overflow:auto;font-size:0.72rem;color:var(--text);}
+    .tk-h3{font-size:0.85rem;color:var(--amber);margin:16px 0 6px;}
+    .tk-timeline{border-left:2px solid var(--panel-border);margin-left:6px;padding-left:14px;}
+    .tk-ev{position:relative;margin-bottom:10px;font-size:0.8rem;}
+    .tk-ev::before{content:"";position:absolute;left:-19px;top:6px;width:8px;height:8px;border-radius:50%;background:var(--amber-dim);}
+    .tk-ev-cuando{color:var(--text-dim);font-size:0.7rem;}
+    .tk-ev-txt{white-space:pre-wrap;}
+    .tk-resolucion{background:var(--ok-soft);border:1px solid var(--ok);border-radius:8px;padding:8px 12px;font-size:0.8rem;margin-top:10px;white-space:pre-wrap;}
+    .tk-gestion{background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:4px 12px 12px;margin-top:6px;}
     .tabla-precios input.precio-edit{width:96px;border:1px solid var(--panel-border);background:var(--panel-2);color:inherit;padding:4px 6px;border-radius:4px;text-align:right;font-variant-numeric:tabular-nums;font-size:0.8rem;}
     .tabla-precios input.precio-edit:focus{outline:none;border-color:var(--amber);}
     .tabla-precios{width:100%;border-collapse:collapse;font-size:0.8rem;}
@@ -256,6 +299,7 @@
   <nav class="tabs-nav">
     <button class="tab-btn activa" id="tabPromos">🏷️ Promociones</button>
     <button class="tab-btn" id="tabPrecios">💲 Actualizar precios</button>
+    <button class="tab-btn" id="tabTickets">🎫 Tickets</button>
   </nav>
 
   <div id="vistaPromos">
@@ -266,6 +310,7 @@
     <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
       <button class="danger chico" id="btnBajarTodo">⬇️ Bajar TODAS las promociones</button>
       <button class="chico oculto" id="btnSubirTodoGuardado">⬆️ Subir TODAS (con los % guardados)</button>
+      <button class="chico secondary oculto" id="btnDescartarSnapshot" title="Borra la cola de % guardados sin tocar nada en Mercado Libre">🗑️ Descartar respaldo</button>
       <span id="estadoSnapshot" class="estado" style="margin:0;"></span>
     </div>
   </div>
@@ -363,6 +408,125 @@
       </div>
     </div>
   </div>
+
+  <!-- ============================================================
+       VISTA: Tickets — módulo transversal (mismo backend en todas las apps)
+       ============================================================ -->
+  <div id="vistaTickets" class="oculto">
+    <div class="panel">
+      <span class="tk-titulo-panel">🎫 Nuevo ticket</span>
+      <p class="tk-ayuda">Reportá un error, proponé una mejora o dejá una consulta. Los tickets de todas las apps van al mismo lugar y quedan con historial completo.</p>
+      <div class="tk-form-grid">
+        <div>
+          <label for="tkTipo">Tipo</label>
+          <select id="tkTipo">
+            <option value="error">🔴 Error / algo no anda</option>
+            <option value="mejora">🟢 Mejora / idea</option>
+            <option value="consulta">🔵 Consulta / duda</option>
+          </select>
+        </div>
+        <div>
+          <label for="tkPrioridad">Prioridad</label>
+          <select id="tkPrioridad">
+            <option value="baja">Baja</option>
+            <option value="media" selected>Media</option>
+            <option value="alta">Alta</option>
+            <option value="urgente">Urgente (me bloquea)</option>
+          </select>
+        </div>
+      </div>
+      <label for="tkAsunto">Asunto (breve)</label>
+      <input type="text" id="tkAsunto" maxlength="200" placeholder="Ej: Al aplicar precios, el SKU 33 muestra un Δ% raro">
+      <label for="tkDetalle">Detalle</label>
+      <textarea id="tkDetalle" rows="4" maxlength="5000" placeholder="Qué hiciste, qué esperabas y qué pasó (o cómo te imaginás la mejora)"></textarea>
+      <label class="tk-check"><input type="checkbox" id="tkAdjuntarContexto" checked><span>Adjuntar contexto técnico automático <span class="tk-ayuda" id="tkContextoPreview"></span></span></label>
+      <div class="tk-acciones">
+        <button class="chico" id="btnEnviarTicket">Enviar ticket</button>
+        <span id="estadoNuevoTicket" class="estado" style="margin:0;"></span>
+      </div>
+    </div>
+
+    <div class="panel">
+      <div class="tk-embudo-head">
+        <span class="tk-titulo-panel">📥 Embudo de tickets</span>
+        <div class="tk-toolbar">
+          <select id="tkAlcance" title="Qué tickets ver">
+            <option value="app">Solo esta app</option>
+            <option value="todas">Todas las apps</option>
+          </select>
+          <select id="tkFiltroTipo" title="Filtrar por tipo">
+            <option value="">Todos los tipos</option>
+            <option value="error">Errores</option>
+            <option value="mejora">Mejoras</option>
+            <option value="consulta">Consultas</option>
+          </select>
+          <input type="search" id="tkBuscar" placeholder="Buscar asunto, #id…">
+          <button class="chico secondary" id="btnRefrescarTickets">🔄 Actualizar</button>
+          <button class="chico secondary" id="btnExportarTickets" title="Arma un resumen de los tickets filtrados para trabajarlos todos juntos con Claude">📋 Exportar lote para Claude</button>
+        </div>
+      </div>
+      <div class="resumen-precios" id="tkResumen"></div>
+      <div id="estadoTickets" class="estado"></div>
+      <div style="overflow-x:auto;"><table class="tabla-precios tk-tabla" id="tablaTickets"></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     MODAL: detalle de ticket (historial, gestión, comentarios)
+     ============================================================ -->
+<div id="modalTicket" class="modal-fondo oculto">
+  <div class="modal-caja tk-modal">
+    <h2 id="tkDetTitulo"></h2>
+    <div id="tkDetMeta" class="tk-meta"></div>
+    <div id="tkDetDetalle" class="tk-detalle"></div>
+    <details class="tk-contexto"><summary>Contexto técnico adjunto</summary><pre id="tkDetContexto"></pre></details>
+    <div id="tkDetResolucion"></div>
+
+    <h3 class="tk-h3">Historial</h3>
+    <div id="tkDetTimeline" class="tk-timeline"></div>
+
+    <div id="tkDetGestion" class="oculto">
+      <h3 class="tk-h3">Gestionar</h3>
+      <div class="tk-gestion">
+        <div class="tk-form-grid">
+          <div>
+            <label for="tkDetEstado">Estado</label>
+            <select id="tkDetEstado">
+              <option value="pendiente">Pendiente</option>
+              <option value="en revision">En revisión</option>
+              <option value="resuelto">Resuelto</option>
+              <option value="rechazado">Rechazado</option>
+            </select>
+          </div>
+          <div>
+            <label for="tkDetPrioridad">Prioridad</label>
+            <select id="tkDetPrioridad">
+              <option value="baja">Baja</option>
+              <option value="media">Media</option>
+              <option value="alta">Alta</option>
+              <option value="urgente">Urgente</option>
+            </select>
+          </div>
+        </div>
+        <div id="tkDetCierre" class="oculto">
+          <label for="tkDetResolucionTxt">Resolución (qué se hizo, o por qué se rechaza)</label>
+          <textarea id="tkDetResolucionTxt" rows="2" maxlength="5000"></textarea>
+          <label for="tkDetVersion">Versión en que quedó resuelto (opcional)</label>
+          <input type="text" id="tkDetVersion" maxlength="60" placeholder="ej. 2026-09-23">
+        </div>
+        <div class="tk-acciones"><button class="chico" id="btnGuardarTicket">Guardar cambios</button></div>
+      </div>
+    </div>
+
+    <h3 class="tk-h3">Comentar</h3>
+    <textarea id="tkDetComentario" rows="2" maxlength="5000" placeholder="Sumá info, una prueba que hiciste, un dato del caso…"></textarea>
+    <div class="tk-acciones">
+      <button class="chico secondary" id="btnComentarTicket">Agregar comentario</button>
+      <span id="estadoDetTicket" class="estado" style="margin:0;"></span>
+    </div>
+    <div class="modal-cerrar"><button class="secondary" id="btnCerrarTicket">Cerrar</button></div>
+  </div>
 </div>
 
 <!-- ============================================================
@@ -395,9 +559,11 @@
     <h3>Subir a todas / Bajar de todas</h3>
     <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
     <h3>Bajar TODAS / Subir TODAS (para actualizar precios masivo)</h3>
-    <p>El botón "⬇️ Bajar TODAS las promociones" es para el flujo de actualización masiva de precios: saca cada publicación de <b>todas</b> sus promociones de una sola llamada (usa el borrado en bloque por publicación de ML). Antes de bajar nada, guarda el % que tenían las campañas reaplicables (Deal y Campaña propia) para poder volver a subirlas igual. El modal de confirmación te separa en tres grupos qué va a pasar: las que <b>se reaplican con "Subir TODAS"</b> (Deal / Campaña propia), las que <b>se bajan pero volvés a sumar a mano</b> (co-financiada, volumen, etc. — ahí el precio lo fija ML), y las que <b>no se pueden bajar desde acá</b> (Oferta del día y Relámpago, que ML no deja sacar por API — se gestionan desde el panel de ML). El flujo típico es: Bajar TODAS → actualizar precios en ML → "⬆️ Subir TODAS (con los % guardados)". Para que junte bien lo activo, primero apretá "Actualizar métricas" (o "Ver candidatos/activos" en las cards).</p>
+    <p>El botón "⬇️ Bajar TODAS las promociones" es para el flujo de actualización masiva de precios: saca cada publicación de <b>todas</b> sus promociones de una sola llamada (usa el borrado en bloque por publicación de ML). Antes de bajar nada, guarda el % que tenían las campañas reaplicables (Deal y Campaña propia) para poder volver a subirlas igual. El modal de confirmación te separa en tres grupos qué va a pasar: las que <b>se reaplican con "Subir TODAS"</b> (Deal / Campaña propia), las que <b>se bajan pero volvés a sumar a mano</b> (co-financiada, volumen, etc. — ahí el precio lo fija ML), y las que <b>no se pueden bajar desde acá</b> (Oferta del día y Relámpago, que ML no deja sacar por API — se gestionan desde el panel de ML). El flujo típico es: Bajar TODAS → actualizar precios en ML → "⬆️ Subir TODAS (con los % guardados)". Mientras haya respaldo pendiente se muestra cuántas publicaciones son y de qué fecha es; si esa precarga ya no te sirve (por ejemplo, decidiste no volver a subirlas), el botón "🗑️ Descartar respaldo" la borra — no toca nada en Mercado Libre, solo limpia la cola. Para que junte bien lo activo, primero apretá "Actualizar métricas" (o "Ver candidatos/activos" en las cards).</p>
     <h3>Pestaña "Actualizar precios"</h3>
     <p>Sirve para actualizar el <b>precio de lista</b> (no el de promo) de muchas publicaciones de una. Cargás <b>SKU y precio</b> en una tabla de dos columnas (podés copiar las dos columnas de Excel y pegarlas en la primera celda: se completa sola). Como un mismo SKU suele estar en varias publicaciones, el precio se aplica a <b>todas las publicaciones activas y pausadas</b> de ese SKU (a la pausada le queda listo para cuando la reactivés; las cerradas se omiten). El flujo es en dos pasos: primero <b>Previsualizar</b> (no toca nada: trae de ML el precio actual de cada publicación y te muestra antes → después → Δ%, con un tiempo estimado mientras corre), y recién después <b>Aplicar en ML</b> (con confirmación escribiendo "APLICAR PRECIOS"). En el preview podés <b>editar el precio de cualquier fila</b> a mano antes de aplicar, y <b>clickear las tarjetas</b> de arriba (A actualizar / A revisar / Omitidas / Con problema) para filtrar la tabla por ese estado. Las publicaciones con variaciones quedan "a revisar" (el precio va por variación). Podés exportar todo a CSV. Encaja con el flujo masivo: bajás las promos, actualizás precios acá, y volvés a subir las promos.</p>
+    <h3>Pestaña "🎫 Tickets"</h3>
+    <p>Es el buzón para reportar <b>errores, mejoras o consultas</b> de esta app. Completás tipo, prioridad, asunto y detalle, y lo enviás. Si dejás tildado "Adjuntar contexto técnico", el ticket se guarda con la app, la versión, el navegador, la pestaña en la que estabas y los últimos errores que aparecieron en la consola, así se puede reproducir el problema sin preguntarte nada. Todos los tickets de <b>todas las apps de CORAZ</b> (promociones, stock, dashboard, etc.) se guardan en un <b>único lugar</b> del backend (tabla <code>tickets</code> de Supabase), cada uno marcado con la app de origen. Abajo está el <b>embudo</b>: por defecto ves los abiertos de esta app, ordenados por prioridad y después por antigüedad; con "Alcance" podés ver los de todas las apps, y las tarjetas de arriba filtran por estado. Al abrir un ticket ves su <b>historial completo</b> (quién lo creó, cada cambio de estado o prioridad, comentarios y cierre): ese historial lo escribe la base de datos sola y no se puede editar ni borrar. Solo los usuarios con permiso de gestión pueden cambiar estado, prioridad y cerrar tickets (al resolver o rechazar hay que escribir la resolución); el resto puede crear y comentar. "Exportar lote para Claude" arma un markdown con todos los abiertos para resolverlos en tanda en una conversación.</p>
     <h3>% de descuento: se pregunta cada vez, por campaña</h3>
     <p>Cuando apretás "Subir a todas" en una campaña con precio (Deal, Campaña propia, Oferta del día), la app te pide un <b>% base</b> para esa tanda puntual, y te deja agregar <b>excepciones por SKU</b> (tantas como quieras) que usan su propio % en vez del base. No es una configuración fija guardada — la definís de nuevo cada vez, campaña por campaña.</p>
     <h3>¿Por qué a veces una publicación queda en "REVISAR"?</h3>
@@ -545,6 +711,19 @@
   var URL_SNAPSHOT = FN_BASE + "/ml-promos-snapshot-crud";
   var TIMEOUT_MS = 20000;
 
+  // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
+  var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
+  var APP_VERSION = "2026-09-23";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+
+  // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
+  var ERRORES_RECIENTES = [];
+  function registrarErrorReciente(msg) {
+    ERRORES_RECIENTES.push({ cuando: new Date().toISOString(), msg: String(msg).slice(0, 300) });
+    if (ERRORES_RECIENTES.length > 5) ERRORES_RECIENTES.shift();
+  }
+  window.addEventListener("error", function (e) { registrarErrorReciente((e.message || "error") + (e.filename ? " @" + e.lineno : "")); });
+  window.addEventListener("unhandledrejection", function (e) { registrarErrorReciente("promesa rechazada: " + (e.reason && e.reason.message ? e.reason.message : e.reason)); });
+
   // Los 12 tipos de /seller-promotions. subir/bajar controlan si el tipo tiene
   // botones de bulk funcionales (confirmado contra doc oficial, 2026-09-01).
   var TIPOS = [
@@ -572,6 +751,7 @@
 
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
   var AUTH = null;
+  var USUARIO_EMAIL = null; // email de la sesión (autor de tickets/comentarios)
   var promoItemsState = {}; // promotion_id -> { candidatos: [...], activos: [...] }, lo llena "Ver candidatos/activos"
   var BATCH_SIZE = 12; // por debajo de MAX_ITEMS_POR_TANDA (15) del servidor, con margen
   var TIMEOUT_TANDA_MS = 40000; // las tandas de bulk tardan más que una consulta simple
@@ -719,6 +899,7 @@
   sb.auth.onAuthStateChange(function (_event, session) {
     if (session) {
       AUTH = "Bearer " + session.access_token;
+      USUARIO_EMAIL = (session.user && session.user.email) || null;
       els.gate.classList.add("oculto");
       els.app.classList.remove("oculto");
       arrancarApp();
@@ -1749,17 +1930,68 @@
       .then(function (res) {
         if (!res.data || !res.data.ok) return;
         var filas = res.data.filas || [];
+        var btnDescartar = document.getElementById("btnDescartarSnapshot");
         if (filas.length > 0) {
           els.btnSubirTodoGuardado.classList.remove("oculto");
-          els.estadoSnapshot.textContent = filas.length + " publicaciones esperando volver a subirse.";
+          btnDescartar.classList.remove("oculto");
+          // Fecha del respaldo más viejo: para saber de cuándo es la precarga.
+          var masVieja = filas[0].creado_at ? new Date(filas[0].creado_at) : null;
+          var desde = masVieja ? " (guardado el " + masVieja.toLocaleDateString("es-AR") + " " + masVieja.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" }) + ")" : "";
+          els.estadoSnapshot.textContent = filas.length + " publicaciones esperando volver a subirse" + desde + ".";
           els.estadoSnapshot.className = "estado";
         } else {
           els.btnSubirTodoGuardado.classList.add("oculto");
+          btnDescartar.classList.add("oculto");
           els.estadoSnapshot.textContent = "";
         }
       })
       .catch(function () { /* no crítico */ });
   }
+
+  // Descartar la cola de % guardados (ml_promos_snapshot). NO toca Mercado Libre:
+  // solo borra el respaldo. Útil cuando quedó una precarga vieja que ya no se va a reaplicar.
+  var TANDA_BORRADO_SNAPSHOT = 100;
+  document.getElementById("btnDescartarSnapshot").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    fetchConTimeout(URL_SNAPSHOT, { headers: { Authorization: AUTH } })
+      .then(function (res) {
+        if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error leyendo el respaldo");
+        var filas = res.data.filas || [];
+        if (filas.length === 0) { cargarEstadoSnapshot(); return; }
+        var fecha = filas[0].creado_at ? new Date(filas[0].creado_at).toLocaleDateString("es-AR") : "?";
+        if (!confirm("Vas a descartar el respaldo de " + filas.length + " publicaciones (guardado el " + fecha + ").\n\nNo se toca nada en Mercado Libre, pero después ya NO vas a poder usar \"Subir TODAS (con los % guardados)\" para esas publicaciones. ¿Continuar?")) return;
+
+        var ids = filas.map(function (f) { return f.id; });
+        var tandas = chunk(ids, TANDA_BORRADO_SNAPSHOT), ti = 0, t0 = Date.now();
+        els.estadoSnapshot.className = "estado";
+        return new Promise(function (resolve, reject) {
+          function sig() {
+            if (ti >= tandas.length) { resolve(ids.length); return; }
+            var hechos = Math.min(ti * TANDA_BORRADO_SNAPSHOT, ids.length);
+            var resta = ti > 0 ? " (resta " + fmtSeg((Date.now() - t0) / 1000 / ti * (tandas.length - ti)) + ")" : "";
+            els.estadoSnapshot.textContent = "Descartando " + hechos + "/" + ids.length + resta + "...";
+            fetchConTimeout(URL_SNAPSHOT + "?ids=" + tandas[ti].join(","), { method: "DELETE", headers: { Authorization: AUTH } })
+              .then(function (r) {
+                if (!r.data || !r.data.ok) throw new Error((r.data && r.data.error) || "error borrando");
+                ti++; sig();
+              })
+              .catch(reject);
+          }
+          sig();
+        }).then(function (total) {
+          els.estadoSnapshot.textContent = "Respaldo descartado (" + total + " filas). Queda limpio.";
+          els.estadoSnapshot.className = "estado ok";
+          setTimeout(cargarEstadoSnapshot, 2500);
+        });
+      })
+      .catch(function (err) {
+        els.estadoSnapshot.textContent = "No se pudo descartar: " + err.message + ". Lo que ya se borró queda borrado; reintentá para terminar.";
+        els.estadoSnapshot.className = "estado err";
+        setTimeout(cargarEstadoSnapshot, 5000); // dejo leer el error antes de refrescar el contador
+      })
+      .finally(function () { btn.disabled = false; });
+  });
 
   els.btnSubirTodoGuardado.addEventListener("click", function () {
     els.btnSubirTodoGuardado.disabled = true;
@@ -1899,15 +2131,25 @@
   var filasResultadoPrecios = null;           // último aplicar (si ya se aplicó)
 
   // --- pestañas ---
+  // Registro de vistas: para sumar una pestaña nueva, agregala acá (id de la vista + id del botón).
+  var VISTAS = {
+    promos:  { vista: "vistaPromos",  tab: "tabPromos" },
+    precios: { vista: "vistaPrecios", tab: "tabPrecios" },
+    tickets: { vista: "vistaTickets", tab: "tabTickets" },
+  };
+  var vistaActual = "promos";
   function mostrarVista(cual) {
-    var esPromos = cual === "promos";
-    document.getElementById("vistaPromos").classList.toggle("oculto", !esPromos);
-    document.getElementById("vistaPrecios").classList.toggle("oculto", esPromos);
-    document.getElementById("tabPromos").classList.toggle("activa", esPromos);
-    document.getElementById("tabPrecios").classList.toggle("activa", !esPromos);
+    if (!VISTAS[cual]) return;
+    vistaActual = cual;
+    Object.keys(VISTAS).forEach(function (k) {
+      document.getElementById(VISTAS[k].vista).classList.toggle("oculto", k !== cual);
+      document.getElementById(VISTAS[k].tab).classList.toggle("activa", k === cual);
+    });
+    if (cual === "tickets") ticketsAlEntrar();
   }
-  document.getElementById("tabPromos").addEventListener("click", function () { mostrarVista("promos"); });
-  document.getElementById("tabPrecios").addEventListener("click", function () { mostrarVista("precios"); });
+  Object.keys(VISTAS).forEach(function (k) {
+    document.getElementById(VISTAS[k].tab).addEventListener("click", function () { mostrarVista(k); });
+  });
 
   // --- parsing de entrada ---
   // Precio AR: "12.500"/"12500" -> 12500 ; "12.500,50"/"12500,50" -> 12500.5
@@ -2285,6 +2527,399 @@
     }
     sig();
   }
+
+  /* ============================================================
+     MÓDULO: Tickets (transversal a todas las apps)
+     Backend: tablas public.tickets + public.tickets_eventos del Supabase compartido.
+     Acceso directo con la sesión del usuario; las reglas RLS de la base controlan:
+       - ver / crear / comentar  → usuarios activos en app_usuarios
+       - cambiar estado, prioridad y resolución → permiso "gestionar_tickets"
+     El historial (tickets_eventos) lo escribe un trigger en la base: no depende de la app.
+     PARA REPLICAR EN OTRA APP: copiar el HTML de #vistaTickets y #modalTicket, los estilos .tk-*,
+     este bloque, la captura de errores de la config, y ajustar TICKETS_APP_ID / APP_VERSION.
+     ============================================================ */
+  var TK_TIMEOUT_MS = 15000;
+  var TK_ORDEN_PRIORIDAD = { urgente: 0, alta: 1, media: 2, baja: 3 };
+  var TK_ESTADO_LABEL = { "pendiente": "Pendiente", "en revision": "En revisión", "resuelto": "Resuelto", "rechazado": "Rechazado" };
+  var TK_TIPO_LABEL = { error: "🔴 Error", mejora: "🟢 Mejora", consulta: "🔵 Consulta" };
+  var TK_PRIO_LABEL = { urgente: "Urgente", alta: "Alta", media: "Media", baja: "Baja" };
+
+  var tkTickets = [];              // última carga (según alcance)
+  var tkFiltroEstado = "abiertos"; // abiertos | pendiente | en revision | resuelto | rechazado | todos
+  var tkPuedeGestionar = false;
+  var tkPermisoConsultado = false;
+  var tkCargadoUnaVez = false;     // se carga sola la primera vez que entrás; después, con 🔄
+  var tkTicketAbierto = null;      // id del ticket abierto en el modal
+
+  function tkConTimeout(promesa, ms) {
+    return Promise.race([promesa, new Promise(function (_, rej) {
+      setTimeout(function () { rej(new Error("tiempo de espera agotado, revisá la conexión")); }, ms || TK_TIMEOUT_MS);
+    })]);
+  }
+  function tkChequear(res) {
+    if (res && res.error) throw new Error(res.error.message || String(res.error));
+    return res;
+  }
+  function tkEsAbierto(t) { return !t.estado || t.estado === "pendiente" || t.estado === "en revision"; }
+  function tkHace(fecha) {
+    var s = (Date.now() - new Date(fecha).getTime()) / 1000;
+    if (s < 3600) return Math.max(1, Math.round(s / 60)) + " min";
+    if (s < 86400) return Math.round(s / 3600) + " h";
+    return Math.round(s / 86400) + " d";
+  }
+  function tkFecha(f) { return f ? new Date(f).toLocaleString("es-AR", { dateStyle: "short", timeStyle: "short" }) : "—"; }
+  function tkBadge(clase, texto) { return '<span class="tk-badge ' + clase + '">' + escapeHtml(texto) + "</span>"; }
+  function tkBadgeEstado(e) { e = e || "pendiente"; return tkBadge("tk-est-" + e.replace(" ", "-"), TK_ESTADO_LABEL[e] || e); }
+  function tkBadgeTipo(t) { return tkBadge("tk-tipo-" + t, TK_TIPO_LABEL[t] || t); }
+  function tkBadgePrio(p) { p = p || "media"; return tkBadge("tk-prio-" + p, TK_PRIO_LABEL[p] || p); }
+
+  // Contexto técnico automático. NUNCA incluye tokens: la URL va sin query ni hash.
+  function armarContextoTicket() {
+    return {
+      app: TICKETS_APP_ID,
+      version: APP_VERSION,
+      pestana: vistaActual,
+      url: location.origin + location.pathname,
+      navegador: navigator.userAgent,
+      pantalla: window.innerWidth + "x" + window.innerHeight,
+      online: navigator.onLine,
+      errores_recientes: ERRORES_RECIENTES.slice(),
+      fecha_local: new Date().toLocaleString("es-AR"),
+    };
+  }
+  function actualizarPreviewContexto() {
+    document.getElementById("tkContextoPreview").textContent =
+      "(app, pestaña, versión " + APP_VERSION + ", navegador" +
+      (ERRORES_RECIENTES.length ? ", " + ERRORES_RECIENTES.length + " error(es) reciente(s)" : ", sin errores recientes") + ")";
+  }
+
+  function ticketsAlEntrar() {
+    actualizarPreviewContexto();
+    if (!tkPermisoConsultado) consultarPermisoTickets();
+    if (!tkCargadoUnaVez) { tkCargadoUnaVez = true; cargarTickets(); }
+  }
+
+  function consultarPermisoTickets() {
+    return tkConTimeout(sb.rpc("puede_gestionar_tickets"))
+      .then(function (res) { tkChequear(res); tkPuedeGestionar = res.data === true; tkPermisoConsultado = true; })
+      .catch(function () { tkPuedeGestionar = false; }); // si falla solo se ocultan los controles; la base igual protege
+  }
+
+  // ---------- Crear ----------
+  document.getElementById("btnEnviarTicket").addEventListener("click", function () {
+    var btn = this, est = document.getElementById("estadoNuevoTicket");
+    var asunto = document.getElementById("tkAsunto").value.trim();
+    var detalle = document.getElementById("tkDetalle").value.trim();
+    if (asunto.length < 3) { est.textContent = "Poné un asunto (mínimo 3 caracteres)."; est.className = "estado err"; return; }
+    if (!detalle) { est.textContent = "Contá un poco más en el detalle."; est.className = "estado err"; return; }
+    var fila = {
+      tipo: document.getElementById("tkTipo").value,
+      prioridad: document.getElementById("tkPrioridad").value,
+      asunto: asunto,
+      detalle: detalle,
+      estado: "pendiente",
+      user_email: USUARIO_EMAIL,
+      app_origen: TICKETS_APP_ID,
+      contexto: document.getElementById("tkAdjuntarContexto").checked ? armarContextoTicket() : { app: TICKETS_APP_ID, version: APP_VERSION },
+    };
+    btn.disabled = true; est.textContent = "Enviando…"; est.className = "estado";
+    tkConTimeout(sb.from("tickets").insert([fila]).select("id").single())
+      .then(function (res) {
+        tkChequear(res);
+        est.textContent = "✅ Ticket #" + res.data.id + " cargado."; est.className = "estado ok";
+        document.getElementById("tkAsunto").value = "";
+        document.getElementById("tkDetalle").value = "";
+        document.getElementById("tkPrioridad").value = "media";
+        return cargarTickets();
+      })
+      .catch(function (err) { est.textContent = "No se pudo cargar el ticket: " + err.message; est.className = "estado err"; })
+      .finally(function () { btn.disabled = false; });
+  });
+
+  // ---------- Listar ----------
+  function cargarTickets() {
+    var est = document.getElementById("estadoTickets");
+    est.textContent = "Cargando tickets…"; est.className = "estado";
+    var q = sb.from("tickets")
+      .select("id, created_at, updated_at, cerrado_at, tipo, asunto, detalle, estado, prioridad, app_origen, user_email, resolucion, resuelto_en_version, contexto")
+      .order("created_at", { ascending: false })
+      .limit(500);
+    if (document.getElementById("tkAlcance").value === "app") q = q.eq("app_origen", TICKETS_APP_ID);
+    return tkConTimeout(q)
+      .then(function (res) {
+        tkChequear(res);
+        tkTickets = res.data || [];
+        renderResumenTickets();
+        renderTablaTickets();
+      })
+      .catch(function (err) { est.textContent = "Error cargando tickets: " + err.message; est.className = "estado err"; });
+  }
+
+  function ticketsFiltrados() {
+    var tipo = document.getElementById("tkFiltroTipo").value;
+    var txt = document.getElementById("tkBuscar").value.trim().toLowerCase().replace(/^#/, "");
+    return tkTickets.filter(function (t) {
+      if (tipo && t.tipo !== tipo) return false;
+      if (tkFiltroEstado === "abiertos" && !tkEsAbierto(t)) return false;
+      if (tkFiltroEstado !== "abiertos" && tkFiltroEstado !== "todos" && (t.estado || "pendiente") !== tkFiltroEstado) return false;
+      if (txt) {
+        var hay = (String(t.id) + " " + (t.asunto || "") + " " + (t.detalle || "") + " " + (t.app_origen || "") + " " + (t.user_email || "")).toLowerCase();
+        if (hay.indexOf(txt) === -1) return false;
+      }
+      return true;
+    }).sort(function (a, b) {
+      var oa = tkEsAbierto(a) ? 0 : 1, ob = tkEsAbierto(b) ? 0 : 1;
+      if (oa !== ob) return oa - ob;
+      if (oa === 0) { // abiertos: primero lo más urgente y, a igual prioridad, lo más viejo
+        var pa = TK_ORDEN_PRIORIDAD[a.prioridad] != null ? TK_ORDEN_PRIORIDAD[a.prioridad] : 2;
+        var pb = TK_ORDEN_PRIORIDAD[b.prioridad] != null ? TK_ORDEN_PRIORIDAD[b.prioridad] : 2;
+        if (pa !== pb) return pa - pb;
+        return new Date(a.created_at) - new Date(b.created_at);
+      }
+      return new Date(b.cerrado_at || b.updated_at) - new Date(a.cerrado_at || a.updated_at); // cerrados: el último primero
+    });
+  }
+
+  function renderResumenTickets() {
+    var c = { "pendiente": 0, "en revision": 0, "resuelto": 0, "rechazado": 0 };
+    tkTickets.forEach(function (t) { var e = t.estado || "pendiente"; if (c[e] != null) c[e]++; });
+    var abiertos = c["pendiente"] + c["en revision"];
+    var alcance = document.getElementById("tkAlcance").value === "app" ? "de esta app" : "de todas las apps";
+    function kpi(filtro, help, label, valor) {
+      var activo = tkFiltroEstado === filtro ? " filtro-activo" : "";
+      return '<div class="kpi clickable' + activo + '" data-filtro="' + filtro + '">' + kpiHelp(help) + " " + label + " <b>" + valor + "</b></div>";
+    }
+    var cont = document.getElementById("tkResumen");
+    cont.innerHTML =
+      kpi("abiertos", "Tickets " + alcance + " que todavía hay que tratar (pendientes + en revisión). Es la vista por defecto. Clic para filtrar.", "Abiertos", abiertos) +
+      kpi("pendiente", "Cargados y todavía sin mirar. Clic para filtrar.", "Pendientes", c["pendiente"]) +
+      kpi("en revision", "Alguien los está analizando o trabajando. Clic para filtrar.", "En revisión", c["en revision"]) +
+      kpi("resuelto", "Cerrados con una resolución (qué se hizo y en qué versión). Clic para filtrar.", "Resueltos", c["resuelto"]) +
+      kpi("rechazado", "Cerrados sin cambios (no corresponde, duplicado, etc.), con el motivo. Clic para filtrar.", "Rechazados", c["rechazado"]) +
+      kpi("todos", "Todos los tickets " + alcance + " (hasta los últimos 500), abiertos y cerrados. Clic para ver todos.", "Total", tkTickets.length);
+    cont.querySelectorAll(".kpi.clickable").forEach(function (k) {
+      k.addEventListener("click", function (e) {
+        if (e.target.closest && e.target.closest(".kpi-help")) return; // el "?" abre su ayuda, no filtra
+        var f = k.getAttribute("data-filtro");
+        tkFiltroEstado = (tkFiltroEstado === f && f !== "abiertos") ? "abiertos" : f;
+        renderResumenTickets();
+        renderTablaTickets();
+      });
+    });
+  }
+
+  function renderTablaTickets() {
+    var tabla = document.getElementById("tablaTickets");
+    var est = document.getElementById("estadoTickets");
+    if (tkTickets.length === 0) {
+      tabla.innerHTML = "";
+      est.textContent = document.getElementById("tkAlcance").value === "app"
+        ? "Todavía no hay tickets de esta app. Cargá el primero arriba (o mirá \"Todas las apps\")."
+        : "Todavía no hay tickets.";
+      est.className = "estado";
+      return;
+    }
+    var filas = ticketsFiltrados();
+    if (filas.length === 0) {
+      tabla.innerHTML = "";
+      est.textContent = tkFiltroEstado === "abiertos" ? "🎉 No hay tickets abiertos con estos filtros." : "No hay tickets con estos filtros.";
+      est.className = "estado";
+      return;
+    }
+    est.textContent = ""; est.className = "estado";
+    var thead = "<thead><tr><th>#</th><th>Asunto</th><th>App</th><th>Tipo</th><th>Prioridad</th><th>Estado</th><th class='num'>Hace</th></tr></thead>";
+    var body = filas.map(function (t) {
+      return '<tr data-id="' + t.id + '">' +
+        "<td>" + t.id + "</td>" +
+        "<td>" + escapeHtml(t.asunto || "") + "</td>" +
+        '<td><span class="tk-app">' + escapeHtml(t.app_origen || "sin app") + "</span></td>" +
+        "<td>" + tkBadgeTipo(t.tipo) + "</td>" +
+        "<td>" + tkBadgePrio(t.prioridad) + "</td>" +
+        "<td>" + tkBadgeEstado(t.estado) + "</td>" +
+        "<td class='num'>" + tkHace(t.created_at) + "</td></tr>";
+    }).join("");
+    tabla.innerHTML = thead + "<tbody>" + body + "</tbody>";
+  }
+
+  document.getElementById("tablaTickets").addEventListener("click", function (e) {
+    var tr = e.target.closest ? e.target.closest("tr[data-id]") : null;
+    if (tr) abrirTicket(Number(tr.getAttribute("data-id")));
+  });
+  document.getElementById("tkAlcance").addEventListener("change", function () { tkFiltroEstado = "abiertos"; cargarTickets(); });
+  document.getElementById("tkFiltroTipo").addEventListener("change", renderTablaTickets);
+  document.getElementById("tkBuscar").addEventListener("input", renderTablaTickets);
+  document.getElementById("btnRefrescarTickets").addEventListener("click", function () { cargarTickets(); });
+
+  // ---------- Detalle ----------
+  function buscarTicket(id) {
+    for (var i = 0; i < tkTickets.length; i++) if (tkTickets[i].id === id) return tkTickets[i];
+    return null;
+  }
+
+  function abrirTicket(id) {
+    var t = buscarTicket(id);
+    if (!t) return;
+    tkTicketAbierto = id;
+    document.getElementById("tkDetTitulo").textContent = "#" + t.id + " · " + (t.asunto || "");
+    document.getElementById("tkDetMeta").innerHTML =
+      tkBadgeTipo(t.tipo) + tkBadgePrio(t.prioridad) + tkBadgeEstado(t.estado) +
+      '<span>· ' + escapeHtml(t.app_origen || "sin app") + "</span>" +
+      "<span>· " + escapeHtml(t.user_email || "—") + "</span>" +
+      "<span>· " + tkFecha(t.created_at) + "</span>";
+    document.getElementById("tkDetDetalle").textContent = t.detalle || "(sin detalle)";
+    var ctx = t.contexto && Object.keys(t.contexto).length ? JSON.stringify(t.contexto, null, 2) : "Sin contexto técnico (cargado desde una versión anterior del módulo).";
+    document.getElementById("tkDetContexto").textContent = ctx;
+    document.getElementById("tkDetResolucion").innerHTML = t.resolucion
+      ? '<div class="tk-resolucion"><b>' + (t.estado === "rechazado" ? "Motivo del rechazo" : "Resolución") + (t.resuelto_en_version ? " (versión " + escapeHtml(t.resuelto_en_version) + ")" : "") + ":</b> " + escapeHtml(t.resolucion) + "</div>"
+      : "";
+
+    // Gestión: solo si la base dice que tenés permiso (igual lo valida al guardar)
+    var gestion = document.getElementById("tkDetGestion");
+    gestion.classList.toggle("oculto", !tkPuedeGestionar);
+    document.getElementById("tkDetEstado").value = t.estado || "pendiente";
+    document.getElementById("tkDetPrioridad").value = t.prioridad || "media";
+    document.getElementById("tkDetResolucionTxt").value = t.resolucion || "";
+    document.getElementById("tkDetVersion").value = t.resuelto_en_version || APP_VERSION;
+    actualizarCamposCierre();
+
+    document.getElementById("tkDetComentario").value = "";
+    var estDet = document.getElementById("estadoDetTicket");
+    estDet.textContent = ""; estDet.className = "estado";
+    document.getElementById("modalTicket").classList.remove("oculto");
+    cargarHistorial(id);
+  }
+
+  function actualizarCamposCierre() {
+    var e = document.getElementById("tkDetEstado").value;
+    document.getElementById("tkDetCierre").classList.toggle("oculto", !(e === "resuelto" || e === "rechazado"));
+  }
+  document.getElementById("tkDetEstado").addEventListener("change", actualizarCamposCierre);
+
+  function textoEvento(ev) {
+    switch (ev.tipo_evento) {
+      case "creado": return "Creó el ticket";
+      case "cambio_estado": return "Estado: " + (TK_ESTADO_LABEL[ev.valor_anterior] || ev.valor_anterior || "—") + " → " + (TK_ESTADO_LABEL[ev.valor_nuevo] || ev.valor_nuevo);
+      case "cambio_prioridad": return "Prioridad: " + (TK_PRIO_LABEL[ev.valor_anterior] || ev.valor_anterior || "—") + " → " + (TK_PRIO_LABEL[ev.valor_nuevo] || ev.valor_nuevo);
+      case "comentario": return "💬 " + (ev.comentario || "");
+      case "resolucion": return "✅ Resolución" + (ev.valor_nuevo ? " (versión " + ev.valor_nuevo + ")" : "") + ": " + (ev.comentario || "");
+      default: return ev.tipo_evento;
+    }
+  }
+
+  function cargarHistorial(id) {
+    var cont = document.getElementById("tkDetTimeline");
+    cont.innerHTML = '<div class="tk-ayuda">Cargando historial…</div>';
+    return tkConTimeout(sb.from("tickets_eventos").select("*").eq("ticket_id", id).order("created_at", { ascending: true }))
+      .then(function (res) {
+        tkChequear(res);
+        if (tkTicketAbierto !== id) return; // el usuario ya abrió otro
+        var evs = res.data || [];
+        cont.innerHTML = evs.length === 0 ? '<div class="tk-ayuda">Sin movimientos registrados.</div>' : evs.map(function (ev) {
+          return '<div class="tk-ev"><div class="tk-ev-cuando">' + tkFecha(ev.created_at) + " · " + escapeHtml(ev.autor_email || "sistema") + '</div><div class="tk-ev-txt">' + escapeHtml(textoEvento(ev)) + "</div></div>";
+        }).join("");
+      })
+      .catch(function (err) { cont.innerHTML = '<div class="estado err">No se pudo cargar el historial: ' + escapeHtml(err.message) + "</div>"; });
+  }
+
+  // ---------- Gestionar (estado / prioridad / resolución) ----------
+  document.getElementById("btnGuardarTicket").addEventListener("click", function () {
+    var btn = this, est = document.getElementById("estadoDetTicket");
+    var t = buscarTicket(tkTicketAbierto);
+    if (!t) return;
+    var nuevoEstado = document.getElementById("tkDetEstado").value;
+    var nuevaPrio = document.getElementById("tkDetPrioridad").value;
+    var cierra = nuevoEstado === "resuelto" || nuevoEstado === "rechazado";
+    var resol = document.getElementById("tkDetResolucionTxt").value.trim();
+    var version = document.getElementById("tkDetVersion").value.trim();
+
+    var cambios = {};
+    if (nuevoEstado !== (t.estado || "pendiente")) cambios.estado = nuevoEstado;
+    if (nuevaPrio !== (t.prioridad || "media")) cambios.prioridad = nuevaPrio;
+    if (cierra) {
+      if (!resol) { est.textContent = nuevoEstado === "rechazado" ? "Contá por qué se rechaza." : "Contá qué se hizo para resolverlo."; est.className = "estado err"; return; }
+      if (resol !== (t.resolucion || "")) cambios.resolucion = resol;
+      if (version !== (t.resuelto_en_version || "")) cambios.resuelto_en_version = version || null;
+    }
+    if (Object.keys(cambios).length === 0) { est.textContent = "No hay cambios para guardar."; est.className = "estado"; return; }
+    cambios.actualizado_por_email = USUARIO_EMAIL;
+
+    btn.disabled = true; est.textContent = "Guardando…"; est.className = "estado";
+    var id = t.id;
+    tkConTimeout(sb.from("tickets").update(cambios).eq("id", id).select("id"))
+      .then(function (res) {
+        tkChequear(res);
+        if (!res.data || res.data.length === 0) throw new Error("tu usuario no tiene permiso para gestionar tickets");
+        est.textContent = "✅ Guardado (queda en el historial)."; est.className = "estado ok";
+        return cargarTickets().then(function () { if (tkTicketAbierto === id) abrirTicket(id); document.getElementById("estadoDetTicket").textContent = "✅ Guardado (queda en el historial)."; document.getElementById("estadoDetTicket").className = "estado ok"; });
+      })
+      .catch(function (err) { est.textContent = "No se guardó: " + err.message; est.className = "estado err"; })
+      .finally(function () { btn.disabled = false; });
+  });
+
+  // ---------- Comentar (cualquier usuario habilitado) ----------
+  document.getElementById("btnComentarTicket").addEventListener("click", function () {
+    var btn = this, est = document.getElementById("estadoDetTicket");
+    var txt = document.getElementById("tkDetComentario").value.trim();
+    if (!txt) { est.textContent = "Escribí el comentario."; est.className = "estado err"; return; }
+    var id = tkTicketAbierto;
+    btn.disabled = true; est.textContent = "Enviando…"; est.className = "estado";
+    tkConTimeout(sb.from("tickets_eventos").insert([{ ticket_id: id, tipo_evento: "comentario", comentario: txt, autor_email: USUARIO_EMAIL }]))
+      .then(function (res) {
+        tkChequear(res);
+        document.getElementById("tkDetComentario").value = "";
+        est.textContent = "✅ Comentario agregado."; est.className = "estado ok";
+        return cargarHistorial(id);
+      })
+      .catch(function (err) { est.textContent = "No se pudo comentar: " + err.message; est.className = "estado err"; })
+      .finally(function () { btn.disabled = false; });
+  });
+
+  document.getElementById("btnCerrarTicket").addEventListener("click", function () {
+    document.getElementById("modalTicket").classList.add("oculto");
+    tkTicketAbierto = null;
+  });
+
+  // ---------- Exportar lote para Claude ----------
+  document.getElementById("btnExportarTickets").addEventListener("click", function () {
+    var est = document.getElementById("estadoTickets");
+    var filas = ticketsFiltrados();
+    if (filas.length === 0) { est.textContent = "No hay tickets para exportar con estos filtros."; est.className = "estado err"; return; }
+    var hoy = new Date().toISOString().slice(0, 10);
+    var alcance = document.getElementById("tkAlcance").value === "app" ? "solo " + TICKETS_APP_ID : "todas las apps";
+    var porApp = {};
+    filas.forEach(function (t) { var k = t.app_origen || "sin app"; (porApp[k] = porApp[k] || []).push(t); });
+
+    var md = "# Lote de tickets — " + hoy + "\n\n" +
+      "> Alcance: " + alcance + " · Filtro: " + tkFiltroEstado + " · " + filas.length + " ticket(s)\n>\n" +
+      "> **Instrucciones para Claude:** trabajá estos tickets en conjunto (agrupá los que tengan la misma causa y resolvelos juntos). " +
+      "Al terminar cada uno, registralo en Supabase (tabla `public.tickets`, proyecto " + SUPABASE_URL.replace("https://", "").split(".")[0] + ") con " +
+      "`estado='resuelto'`, `resolucion='qué se hizo'`, `resuelto_en_version='AAAA-MM-DD'` y `actualizado_por_email='claude'`; " +
+      "si no corresponde, `estado='rechazado'` con el motivo en `resolucion`. El historial se registra solo (trigger).\n\n";
+    Object.keys(porApp).sort().forEach(function (app) {
+      md += "## " + app + " (" + porApp[app].length + ")\n\n";
+      porApp[app].forEach(function (t) {
+        var c = t.contexto || {};
+        md += "### #" + t.id + " · " + (t.asunto || "") + "\n" +
+          "- **Tipo / prioridad / estado:** " + t.tipo + " · " + (t.prioridad || "media") + " · " + (t.estado || "pendiente") + "\n" +
+          "- **Cargado:** " + tkFecha(t.created_at) + " por " + (t.user_email || "—") + " (hace " + tkHace(t.created_at) + ")\n" +
+          "- **Detalle:** " + String(t.detalle || "").replace(/\n/g, "\n  ") + "\n" +
+          (c.pestana || c.version ? "- **Contexto:** pestaña " + (c.pestana || "?") + ", versión " + (c.version || "?") + (c.errores_recientes && c.errores_recientes.length ? ", errores: " + c.errores_recientes.map(function (x) { return x.msg; }).join(" | ") : "") + "\n" : "") +
+          (t.resolucion ? "- **Resolución actual:** " + t.resolucion + "\n" : "") + "\n";
+      });
+    });
+
+    var copiado = navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(md).then(function () { return true; }, function () { return false; }) : Promise.resolve(false);
+    copiado.then(function (ok) {
+      var blob = new Blob([md], { type: "text/markdown;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url; a.download = hoy + "_tickets-lote.md";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 1000);
+      est.textContent = (ok ? "📋 Copiado al portapapeles y descargado" : "Descargado") + " (" + filas.length + " tickets). Pegalo en tu chat con Claude.";
+      est.className = "estado ok";
+    });
+  });
 })();
 </script>
 </body>
