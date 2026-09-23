@@ -294,6 +294,17 @@
     .resumen-precios{display:flex;gap:12px;flex-wrap:wrap;margin:4px 0 14px;}
     .resumen-precios .kpi{background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:8px 12px;font-size:0.78rem;color:var(--text-dim);}
     .resumen-precios .kpi b{font-size:1.15rem;display:block;color:inherit;}
+    /* ---------- Corrida en segundo plano (barrita flotante) ---------- */
+    .pill-corrida{position:fixed;right:16px;bottom:16px;z-index:90;background:var(--panel);border:1px solid var(--amber);color:var(--text);border-radius:999px;padding:10px 16px;font-size:0.82rem;box-shadow:0 6px 20px rgba(0,0,0,.45);cursor:pointer;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px);}
+    .pill-corrida:hover{border-color:#f0b458;}
+    .pill-corrida.terminada{border-color:var(--ok);}
+    .pill-spinner{width:12px;height:12px;border-radius:50%;border:2px solid var(--amber-soft);border-top-color:var(--amber);animation:giro .8s linear infinite;flex-shrink:0;}
+    .pill-corrida.terminada .pill-spinner{animation:none;border-color:var(--ok);background:var(--ok);}
+    @keyframes giro{to{transform:rotate(360deg)}}
+    @media (max-width:520px){.pill-corrida{left:16px;right:16px;bottom:12px;justify-content:center;}}
+    /* ---------- % aplicados: aplicar a todas ---------- */
+    .pct-masivo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:0.82rem;}
+    .aviso-7d{font-size:0.78rem;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-dim);border-radius:8px;padding:10px 12px;margin:0 0 12px;}
   </style>
 
   <nav class="tabs-nav">
@@ -555,7 +566,7 @@
     <h3>De dónde salen los datos</h3>
     <p>Se consulta en vivo la API de Mercado Libre (recurso <code>seller-promotions</code>) usando el mismo token que ya usan el resto de las apps de CORAZ. No hay copia local de las promociones — lo que ves es el estado real en ML en el momento de cargar la página.</p>
     <h3>Los 12 tipos de promoción</h3>
-    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" (por card) está disponible para Campaña propia, Campaña tradicional, Co-financiada, Descuento por volumen y Descuento pre-negociado. Los tipos automáticos (co-participación automática, ajuste a competencia, liquidación, cupón) no tienen botón de bajar por card: se sacan desde el botón global "Bajar TODAS". El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo. Las cards traen sus candidatos/activos <b>solas una única vez al abrir la app</b>; después no se recargan solas — cada una se actualiza a mano con su botón "🔄 Ver candidatos/activos" (o todas juntas con "Actualizar candidatos/activos de todas"). Así la app no dispara consultas a ML todo el tiempo.</p>
+    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" (por card) está disponible para Campaña propia, Campaña tradicional, Co-financiada, Descuento por volumen y Descuento pre-negociado. Los tipos automáticos (co-participación automática, ajuste a competencia, liquidación, cupón) no tienen botón de bajar por card: se sacan desde el botón global "Bajar TODAS". El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo. Las cards traen sus candidatos/activos <b>solas una única vez al abrir la app</b>; después no se recargan solas — cada una se actualiza a mano con su botón "🔄 Ver candidatos/activos" (o todas juntas con "Actualizar candidatos/activos de todas"). Así la app no dispara consultas a ML todo el tiempo. Excepción: al terminar una tanda, se refresca sola la card que tocaste (o todas, si fue "Bajar TODAS" / "Subir TODAS"), para que veas los números ya actualizados.</p>
     <h3>Subir a todas / Bajar de todas</h3>
     <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
     <h3>Bajar TODAS / Subir TODAS (para actualizar precios masivo)</h3>
@@ -564,10 +575,16 @@
     <p>Sirve para actualizar el <b>precio de lista</b> (no el de promo) de muchas publicaciones de una. Cargás <b>SKU y precio</b> en una tabla de dos columnas (podés copiar las dos columnas de Excel y pegarlas en la primera celda: se completa sola). Como un mismo SKU suele estar en varias publicaciones, el precio se aplica a <b>todas las publicaciones activas y pausadas</b> de ese SKU (a la pausada le queda listo para cuando la reactivés; las cerradas se omiten). El flujo es en dos pasos: primero <b>Previsualizar</b> (no toca nada: trae de ML el precio actual de cada publicación y te muestra antes → después → Δ%, con un tiempo estimado mientras corre), y recién después <b>Aplicar en ML</b> (con confirmación escribiendo "APLICAR PRECIOS"). En el preview podés <b>editar el precio de cualquier fila</b> a mano antes de aplicar, y <b>clickear las tarjetas</b> de arriba (A actualizar / A revisar / Omitidas / Con problema) para filtrar la tabla por ese estado. Las publicaciones con variaciones quedan "a revisar" (el precio va por variación). Podés exportar todo a CSV. Encaja con el flujo masivo: bajás las promos, actualizás precios acá, y volvés a subir las promos.</p>
     <h3>Pestaña "🎫 Tickets"</h3>
     <p>Es el buzón para reportar <b>errores, mejoras o consultas</b> de esta app. Completás tipo, prioridad, asunto y detalle, y lo enviás. Si dejás tildado "Adjuntar contexto técnico", el ticket se guarda con la app, la versión, el navegador, la pestaña en la que estabas y los últimos errores que aparecieron en la consola, así se puede reproducir el problema sin preguntarte nada. Todos los tickets de <b>todas las apps de CORAZ</b> (promociones, stock, dashboard, etc.) se guardan en un <b>único lugar</b> del backend (tabla <code>tickets</code> de Supabase), cada uno marcado con la app de origen. Abajo está el <b>embudo</b>: por defecto ves los abiertos de esta app, ordenados por prioridad y después por antigüedad; con "Alcance" podés ver los de todas las apps, y las tarjetas de arriba filtran por estado. Al abrir un ticket ves su <b>historial completo</b> (quién lo creó, cada cambio de estado o prioridad, comentarios y cierre): ese historial lo escribe la base de datos sola y no se puede editar ni borrar. Solo los usuarios con permiso de gestión pueden cambiar estado, prioridad y cerrar tickets (al resolver o rechazar hay que escribir la resolución); el resto puede crear y comentar. "Exportar lote para Claude" arma un markdown con todos los abiertos para resolverlos en tanda en una conversación.</p>
+    <h3>Seguir usando la app mientras corre una tanda</h3>
+    <p>Cuando lanzás "Subir a todas", "Bajar de todas", "Bajar TODAS" o "Subir TODAS", aparece la ventana de progreso. Con el botón <b>"➖ Seguir usando la app"</b> (o con Cerrar) la ventana se achica a una <b>barrita abajo a la derecha</b> que sigue mostrando el avance y el tiempo que resta; la corrida no se corta. Tocando la barrita volvés al detalle, y cuando termina se pone verde. Dos reglas: <b>no cierres ni recargues la pestaña</b> mientras corre (el navegador te avisa), y solo puede correr <b>una tanda a la vez</b>.</p>
+    <h3>% aplicados: el mismo % a todas</h3>
+    <p>En "Ver % aplicados" de una campaña con precio (Deal, Campaña propia) podés escribir un % en <b>"Aplicar X% a todas"</b> y apretar <b>Rellenar</b>: copia ese % en todas las filas sin guardar nada. Después ajustás a mano las que quieras y apretás <b>"Guardar todas las modificadas"</b>: se aplican solo las filas cuyo % cambió, por tandas y con tiempo estimado. La columna <b>Resultado</b> muestra, por publicación, si quedó aplicado o si el % quedó fuera del rango que acepta ML (con el rango válido).</p>
     <h3>% de descuento: se pregunta cada vez, por campaña</h3>
     <p>Cuando apretás "Subir a todas" en una campaña con precio (Deal, Campaña propia, Oferta del día), la app te pide un <b>% base</b> para esa tanda puntual, y te deja agregar <b>excepciones por SKU</b> (tantas como quieras) que usan su propio % en vez del base. No es una configuración fija guardada — la definís de nuevo cada vez, campaña por campaña.</p>
     <h3>¿Por qué a veces una publicación queda en "REVISAR"?</h3>
     <p>Mercado Libre calcula, para cada publicación, un rango de precio que considera un descuento "creíble" — ni tan chico que parezca falso, ni tan grande que no se sostenga. Ese rango tiene un piso (<code>min_discounted_price</code>, el descuento más profundo permitido) y un techo (<code>max_discounted_price</code>, el descuento más chico que todavía cuenta como oferta real). Si el % que pediste da un precio fuera de ese rango, la app <b>no aplica nada solo</b> — la deja en estado "REVISAR" y te muestra el % mínimo y máximo que sí entran, más el precio que ML sugiere como alternativa. Vos decidís: ajustás el % (general o solo para ese SKU) y reintentás, o usás el botón "Usar precio sugerido de ML" para resolverlas rápido.</p>
+    <p><b>La regla de los ~7 días:</b> ML arma ese rango comparando contra el <b>precio más bajo de los últimos ~7 días</b> (lo confirmó un consultor de ML). Por eso, si subiste el precio de lista hace poco (algo habitual con inflación), un descuento chico no le parece "creíble" y muchas publicaciones caen en REVISAR hasta que pasa esa semana. Cuando actualizás precios desde la pestaña "Actualizar precios", la app lo recuerda (solo en este navegador) y te avisa al volver a subir promos durante esos días. Opciones: esperar, usar un % mayor o aceptar el precio sugerido de ML.</p>
+    <p><b>Una publicación en dos campañas:</b> ML deja que una publicación esté en varias campañas a la vez, pero al comprador le muestra <b>el precio más bajo</b>. Si la subís a una campaña con un descuento menor que el de otra en la que ya está, queda cargada pero "tapada", y en el panel de ML la vas a ver en la otra campaña. No es un error de la app.</p>
     <div class="modal-cerrar"><button id="btnCerrarFuncionamiento">Cerrar</button></div>
   </div>
 </div>
@@ -582,7 +599,9 @@
     <p>Definí el % para esta tanda. Podés agregar excepciones por SKU — esos usan su propio % en vez del base.</p>
     <p style="font-size:0.78rem; color:var(--text-dim); background:var(--panel-2); border:1px solid var(--panel-border); border-radius:8px; padding:10px 12px;">
       ⚠️ Mercado Libre le calcula a cada publicación un rango de descuento "creíble" (un % mínimo y un % máximo propio, que varía por item). Si el % que pongas queda afuera de ese rango para alguna publicación puntual, esa no se aplica sola — queda en <b>REVISAR</b> al final, mostrándote el rango real de esa publicación para que ajustes.
+      ML arma ese rango mirando el <b>precio más bajo de los últimos ~7 días</b>: si subiste el precio de lista hace poco, un % chico puede no alcanzar para que el descuento sea "creíble".
     </p>
+    <div id="avisoPreciosRecientes" class="aviso-7d oculto"></div>
 
     <label for="inputPctBase">% base (para todos los SKU sin excepción)</label>
     <input type="number" id="inputPctBase" min="1" max="99" step="1" style="width:100%; margin-bottom:14px;">
@@ -638,6 +657,13 @@
   <div class="modal-caja" style="max-width:720px;">
     <h2>% aplicados — <span id="pctAplicadosNombreCampana"></span></h2>
     <div id="pctAplicadosEstado" class="estado"></div>
+    <div id="pctMasivoBar" class="pct-masivo oculto">
+      <label for="inputPctMasivo" style="margin:0;">Aplicar</label>
+      <input type="number" id="inputPctMasivo" min="1" max="99" step="0.1" style="width:80px;" placeholder="%">
+      <span>% a todas</span>
+      <button class="chico secondary" id="btnRellenarPct" type="button" title="Copia ese % en todas las filas (todavía no guarda)">Rellenar</button>
+      <button class="chico" id="btnGuardarTodosPct" type="button">💾 Guardar todas las modificadas</button>
+    </div>
     <div style="overflow-x:auto;">
       <table class="log" id="tablaPctAplicados">
         <thead>
@@ -647,6 +673,7 @@
             <th data-sort="pct" style="cursor:pointer;">% aplicado<span class="flecha-orden"></span></th>
             <th data-sort="price" style="cursor:pointer;">Precio actual<span class="flecha-orden"></span></th>
             <th>Editar %</th>
+            <th>Resultado</th>
           </tr>
         </thead>
         <tbody id="tablaPctAplicadosBody"></tbody>
@@ -690,9 +717,17 @@
         <button class="secondary oculto" id="btnReintentarFallidos">Reintentar fallidos</button>
         <button class="secondary oculto" id="btnUsarSugerido">Usar precio sugerido de ML</button>
       </div>
-      <button id="btnCerrarResultado">Cerrar</button>
+      <div style="display:flex; gap:8px;">
+        <button class="secondary oculto" id="btnMinimizarResultado" title="La corrida sigue sola; podés seguir usando la app">➖ Seguir usando la app</button>
+        <button id="btnCerrarResultado">Cerrar</button>
+      </div>
     </div>
   </div>
+</div>
+
+<!-- Barrita flotante: corrida en segundo plano (clic = volver al detalle) -->
+<div id="pillCorrida" class="pill-corrida oculto" role="button" tabindex="0" title="Tocá para ver el detalle">
+  <span class="pill-spinner"></span><span id="pillCorridaTexto"></span>
 </div>
 
 <script>
@@ -713,7 +748,7 @@
 
   // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
   var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
-  var APP_VERSION = "2026-09-23";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+  var APP_VERSION = "2026-09-23.2";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
 
   // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
   var ERRORES_RECIENTES = [];
@@ -740,6 +775,12 @@
     { codigo: "LIGHTNING", nombre: "Oferta relámpago", explicacion: "Oferta corta con stock reservado. Mecanismo de alta todavía no confirmado del todo — por ahora solo informativo.", subir: false, bajar: false },
     { codigo: "PRICE_DISCOUNT", nombre: "Descuento simple", explicacion: "Descuento puntual sobre una publicación, no es una campaña con candidatos — necesita otra pantalla, no bulk por tipo.", subir: false, bajar: false },
   ];
+
+  // Regla de ML (confirmada por consultor de ML, 2026-09): el rango de descuento "creíble" se calcula
+  // contra el precio más bajo de los últimos ~7 días. Si el precio de lista subió hace poco, un % chico queda en REVISAR.
+  var DIAS_REFERENCIA_ML = 7;
+  var TEXTO_REGLA_7D = "Si subiste precios en los últimos ~" + DIAS_REFERENCIA_ML + " días es esperable: ML mide el descuento contra el precio más bajo de esa semana.";
+  var LS_PRECIOS_RECIENTES = TICKETS_APP_ID + ":ultima_actualizacion_precios"; // solo este navegador (aviso de conveniencia)
 
   // Tipos donde el vendedor define el precio (los otros: ML lo calcula solo, no hace falta preguntar %).
   var TIPOS_NECESITAN_PRECIO = ["DEAL", "SELLER_CAMPAIGN", "DOD"];
@@ -1024,6 +1065,8 @@
   }
 
   var gridYaAutoActualizado = false; // el PRIMER render auto-actualiza todas las cards una vez; después, manual
+  // Tras una corrida, el próximo render refresca SOLO lo que se tocó: "todas" (acciones globales) o [promotion_id].
+  var refrescarTrasRender = null;
   function renderGrid(promosActivas) {
     ultimasPromosActivas = promosActivas;
     var porTipo = {};
@@ -1063,6 +1106,12 @@
     if (!gridYaAutoActualizado) {
       gridYaAutoActualizado = true;
       botonesConteo.forEach(function (btn) { cargarConteo(btn); });
+    } else if (refrescarTrasRender) {
+      var objetivo = refrescarTrasRender;
+      refrescarTrasRender = null;
+      botonesConteo.forEach(function (btn) {
+        if (objetivo === "todas" || objetivo.indexOf(btn.getAttribute("data-promotion-id")) !== -1) cargarConteo(btn);
+      });
     }
 
     els.gridTipos.querySelectorAll("[data-ver-pct]").forEach(function (btn) {
@@ -1213,7 +1262,36 @@
      ============================================================ */
   var pctPendiente = null; // { promotionId, promotionType, nombre }
 
+  // ---------- Aviso "subiste precios hace poco" (registro local, por navegador) ----------
+  function guardarRegistroPrecios(reg) {
+    try { localStorage.setItem(LS_PRECIOS_RECIENTES, JSON.stringify(reg)); } catch (e) { /* sin storage: el aviso no se muestra, nada más */ }
+  }
+  function leerRegistroPrecios() {
+    try { var r = JSON.parse(localStorage.getItem(LS_PRECIOS_RECIENTES) || "null"); return r && r.fecha ? r : null; } catch (e) { return null; }
+  }
+  // Devuelve el aviso (texto plano) si hubo subas de precio de lista desde esta app en los últimos ~7 días; si no, "".
+  function avisoPreciosRecientes() {
+    var r = leerRegistroPrecios();
+    if (!r || !r.subieron) return "";
+    var f = new Date(r.fecha);
+    if (isNaN(f.getTime()) || (Date.now() - f.getTime()) / 86400000 >= DIAS_REFERENCIA_ML) return "";
+    var hasta = new Date(f.getTime() + DIAS_REFERENCIA_ML * 86400000);
+    return "⏳ El " + f.toLocaleDateString("es-AR") + " subiste el precio de lista de " + r.subieron + " publicación(es) desde esta app. " +
+      "ML mide el descuento contra el precio más bajo de los últimos ~" + DIAS_REFERENCIA_ML + " días, así que hasta el " + hasta.toLocaleDateString("es-AR") +
+      " es probable que muchas queden en REVISAR con un % chico. Opciones: esperar, usar un % mayor o el precio sugerido de ML.";
+  }
+  // Se llama al terminar "Aplicar en ML" (pestaña precios): guarda cuántas publicaciones SUBIERON de precio.
+  function registrarPreciosAplicados(log) {
+    var subieron = (log || []).filter(function (l) { return l.estado === "APLICADO" && Number(l.pct) > 0; }).length;
+    if (subieron > 0) guardarRegistroPrecios({ fecha: new Date().toISOString(), subieron: subieron });
+  }
+
   function abrirModalPorcentaje(promotionId, promotionType, nombre) {
+    if (hayCorridaEnCurso()) return;
+    var aviso = avisoPreciosRecientes();
+    var elAviso = document.getElementById("avisoPreciosRecientes");
+    elAviso.textContent = aviso;
+    elAviso.classList.toggle("oculto", !aviso);
     pctPendiente = { promotionId: promotionId, promotionType: promotionType, nombre: nombre };
     els.porcentajeNombreCampana.textContent = nombre;
     els.inputPctBase.value = "";
@@ -1271,6 +1349,7 @@
   var accionPendiente = null;
 
   function abrirConfirmacion(promotionId, promotionType, accion, nombre, pctConfig) {
+    if (hayCorridaEnCurso()) return;
     accionPendiente = { promotionId: promotionId, promotionType: promotionType, accion: accion, pctConfig: pctConfig || null };
     els.confirmarTitulo.textContent = accion === "subir" ? "¿Subir todas las candidatas?" : "¿Bajar todas las activas?";
 
@@ -1417,6 +1496,7 @@
     var logAcumulado = [];
     var exitosos = 0, errores = 0, revisar = 0, indice = 0;
     var t0Tanda = Date.now();
+    iniciarCorrida();
 
     els.resultadoTitulo.textContent = a.accion === "subir" ? "Subiendo a todas..." : "Bajando de todas...";
     els.resultadoResumen.textContent = "Procesando 0/" + itemsTotal.length + " (estimado " + fmtSeg(itemsTotal.length * 0.5) + ")...";
@@ -1432,7 +1512,7 @@
         els.resultadoTitulo.textContent = a.accion === "subir" ? "Resultado — Subir a todas" : "Resultado — Bajar de todas";
         var resumen = itemsTotal.length + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error";
         if (revisar > 0) resumen += ", " + revisar + " necesitan revisión (el % pedido queda fuera del rango que ML considera creíble)";
-        els.resultadoResumen.textContent = resumen + ".";
+        els.resultadoResumen.textContent = resumen + "." + (revisar > 0 ? " " + TEXTO_REGLA_7D : "");
         renderTablaLog(logAcumulado, a.accion);
 
         ultimoContextoTanda = { a: a, itemsTotal: itemsTotal, logAcumulado: logAcumulado };
@@ -1442,6 +1522,8 @@
 
         els.btnConfirmarAccion.disabled = false;
         accionPendiente = null;
+        finCorrida();
+        refrescarTrasRender = [a.promotionId];
         arrancarApp();
         return;
       }
@@ -1477,6 +1559,7 @@
           renderTablaLog(logAcumulado, a.accion);
           els.btnConfirmarAccion.disabled = false;
           accionPendiente = null;
+          finCorrida();
         });
     }
 
@@ -1484,7 +1567,7 @@
   }
 
   els.btnReintentarFallidos.addEventListener("click", function () {
-    if (!ultimoContextoTanda) return;
+    if (!ultimoContextoTanda || hayCorridaEnCurso()) return;
     var ctx = ultimoContextoTanda;
     var idsFallidos = {};
     ctx.logAcumulado.forEach(function (l) { if (l.estado === "ERROR") idsFallidos[l.item_id] = true; });
@@ -1500,7 +1583,7 @@
   }
 
   els.btnUsarSugerido.addEventListener("click", function () {
-    if (!ultimoContextoTanda) return;
+    if (!ultimoContextoTanda || hayCorridaEnCurso()) return;
     var ctx = ultimoContextoTanda;
     var idsConSugerido = {};
     ctx.logAcumulado.forEach(function (l) { if (l.estado === "REVISAR" && l.sugerido != null) idsConSugerido[l.item_id] = true; });
@@ -1510,7 +1593,7 @@
   });
 
   els.btnAplicarPctRevisar.addEventListener("click", function () {
-    if (!ultimoContextoTanda) return;
+    if (!ultimoContextoTanda || hayCorridaEnCurso()) return;
     var pct = Number(els.inputPctRevisar.value);
     if (!pct || pct <= 0 || pct >= 100) {
       els.inputPctRevisar.style.borderColor = "var(--err)";
@@ -1566,18 +1649,104 @@
     els.modalResultado.classList.remove("oculto");
   }
 
-  els.btnCerrarResultado.addEventListener("click", function () { els.modalResultado.classList.add("oculto"); });
+  /* ---------- Corrida en segundo plano: minimizar el modal de resultado ----------
+     Los motores (subir/bajar por card, Bajar TODAS, Subir TODAS) escriben su avance en
+     #resultadoResumen. Mientras corren, el modal se puede minimizar a una barrita flotante
+     que espeja ese avance, y se puede seguir usando el resto de la app. Solo puede haber
+     UNA corrida viva a la vez (comparten el mismo modal). La pestaña tiene que quedar abierta. */
+  var corridaEnCurso = false;
+  var corridaMinimizada = false;
+  var elPill = document.getElementById("pillCorrida");
+  var elPillTexto = document.getElementById("pillCorridaTexto");
+  var btnMinimizarResultado = document.getElementById("btnMinimizarResultado");
+
+  function refrescarPill() {
+    if (!corridaMinimizada) return;
+    elPillTexto.textContent = corridaEnCurso
+      ? els.resultadoTitulo.textContent + " " + els.resultadoResumen.textContent
+      : "✅ Terminó — tocá para ver el detalle";
+    elPill.classList.toggle("terminada", !corridaEnCurso);
+  }
+  new MutationObserver(refrescarPill).observe(els.resultadoResumen, { childList: true, characterData: true, subtree: true });
+
+  function iniciarCorrida() {
+    corridaEnCurso = true;
+    btnMinimizarResultado.classList.remove("oculto");
+  }
+  function finCorrida() {
+    corridaEnCurso = false;
+    btnMinimizarResultado.classList.add("oculto");
+    refrescarPill();
+  }
+  function minimizarResultado() {
+    corridaMinimizada = true;
+    els.modalResultado.classList.add("oculto");
+    elPill.classList.remove("oculto");
+    refrescarPill();
+  }
+  function restaurarResultado() {
+    corridaMinimizada = false;
+    elPill.classList.add("oculto");
+    els.modalResultado.classList.remove("oculto");
+  }
+  // Devuelve true (y avisa) si ya hay una corrida viva: no se puede lanzar otra en paralelo.
+  function hayCorridaEnCurso() {
+    if (!corridaEnCurso) return false;
+    alert("Hay una corrida en curso (" + els.resultadoResumen.textContent + ").\nEsperá a que termine para lanzar otra.");
+    return true;
+  }
+  btnMinimizarResultado.addEventListener("click", minimizarResultado);
+  elPill.addEventListener("click", restaurarResultado);
+  elPill.addEventListener("keydown", function (e) { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); restaurarResultado(); } });
+  els.btnCerrarResultado.addEventListener("click", function () {
+    if (corridaEnCurso) { minimizarResultado(); return; } // cerrar a mitad de corrida = minimizar: la corrida NO se corta
+    els.modalResultado.classList.add("oculto");
+  });
+  window.addEventListener("beforeunload", function (e) {
+    if (!corridaEnCurso) return;
+    e.preventDefault(); e.returnValue = ""; // el navegador pregunta antes de cerrar/recargar la pestaña
+  });
 
   /* ============================================================
      MODAL: % aplicados por campaña (editable, ordenable)
      ============================================================ */
   var pctAplicadosContexto = null; // { promotionId, promotionType }
   var pctAplicadosOrden = { campo: "id", asc: true };
+  var pctEditados = {};           // item_id -> % tipeado y todavía no guardado (sobrevive a reordenar)
+  var pctResultadoPorItem = {};   // item_id -> { tipo: ok|warn|err, txt } del último guardado
+  var pctMasivoEnCurso = false;
+  var elPctMasivoBar = document.getElementById("pctMasivoBar");
+  var elInputPctMasivo = document.getElementById("inputPctMasivo");
+  var btnRellenarPct = document.getElementById("btnRellenarPct");
+  var btnGuardarTodosPct = document.getElementById("btnGuardarTodosPct");
+
+  function pctActualDe(it) {
+    return it.original_price > 0 ? Math.round((1 - it.price / it.original_price) * 1000) / 10 : 0;
+  }
+  function celdaResultadoPct(id) {
+    var r = pctResultadoPorItem[id];
+    if (!r) return "";
+    var col = r.tipo === "ok" ? "var(--ok)" : (r.tipo === "warn" ? "var(--amber)" : "var(--err)");
+    return "<span style='color:" + col + "; font-size:0.72rem;'>" + escapeHtml(r.txt) + "</span>";
+  }
+  // Traduce una línea del log de ml-promos-bulk al resultado que se muestra por fila.
+  function resultadoDesdeLog(l) {
+    if (l.estado === "APLICADO") return { tipo: "ok", txt: "✓ " + l.porcentaje + "% ($" + l.precio_aplicado + ")" };
+    if (l.estado === "REVISAR") {
+      return { tipo: "warn", txt: "Fuera de rango: válido " + (l.porcentaje_minimo != null ? l.porcentaje_minimo + "%" : "?") + " a " +
+        (l.porcentaje_maximo != null ? l.porcentaje_maximo + "%" : "?") + (l.sugerido ? " · sugerido $" + l.sugerido : "") };
+    }
+    return { tipo: "err", txt: "Error: " + textoError(l.detalle) };
+  }
 
   function abrirModalPctAplicados(promotionId, promotionType, nombre) {
     pctAplicadosContexto = { promotionId: promotionId, promotionType: promotionType };
     els.pctAplicadosNombreCampana.textContent = nombre;
     pctAplicadosOrden = { campo: "id", asc: true };
+    pctEditados = {};
+    pctResultadoPorItem = {};
+    elInputPctMasivo.value = "";
+    elPctMasivoBar.classList.add("oculto");
     actualizarFlechasOrden();
 
     var estado = promoItemsState[promotionId];
@@ -1592,6 +1761,7 @@
     els.pctAplicadosEstado.textContent = estado.activos.length === 0 ? "No hay publicaciones activas en esta campaña."
       : (TIPOS_NECESITAN_PRECIO.indexOf(promotionType) === -1 ? "Este tipo lo gestiona ML automáticamente — el % es solo informativo, no editable." : "");
     els.pctAplicadosEstado.className = "estado";
+    elPctMasivoBar.classList.toggle("oculto", !(estado.activos.length > 0 && TIPOS_NECESITAN_PRECIO.indexOf(promotionType) !== -1));
     renderTablaPctAplicados(estado.activos);
     els.modalPctAplicados.classList.remove("oculto");
   }
@@ -1601,7 +1771,7 @@
     var asc = pctAplicadosOrden.asc;
 
     var filas = activos.map(function (it) {
-      var pct = it.original_price > 0 ? Math.round((1 - it.price / it.original_price) * 1000) / 10 : 0;
+      var pct = pctActualDe(it);
       return { id: it.id, original_price: it.original_price, price: it.price, min_discounted_price: it.min_discounted_price, max_discounted_price: it.max_discounted_price, pct: pct };
     });
 
@@ -1623,14 +1793,22 @@
         "<td class='celda-precio'>$" + f.price + "</td>" +
         "<td style='display:flex; gap:6px; align-items:center;'>" +
           (editable
-            ? "<input type='number' class='input-editar-pct' value='" + f.pct + "' min='1' max='99' step='0.1' style='width:70px;'>" +
+            ? "<input type='number' class='input-editar-pct' value='" + (pctEditados[f.id] != null ? pctEditados[f.id] : f.pct) + "' min='1' max='99' step='0.1' style='width:70px;'>" +
               "<button class='chico secondary btn-guardar-pct'>Guardar</button>"
             : "<span style='color:var(--text-dim); font-size:0.75rem;'>gestiona ML</span>") +
         "</td>" +
+        "<td class='celda-res'>" + celdaResultadoPct(f.id) + "</td>" +
       "</tr>";
     }).join("");
 
     if (!editable) return;
+
+    // Lo tipeado queda en memoria para que no se pierda al reordenar la tabla.
+    els.tablaPctAplicadosBody.querySelectorAll(".input-editar-pct").forEach(function (inp) {
+      inp.addEventListener("input", function () {
+        pctEditados[inp.closest("tr").getAttribute("data-fila-item")] = inp.value;
+      });
+    });
 
     els.tablaPctAplicadosBody.querySelectorAll(".btn-guardar-pct").forEach(function (btn) {
       btn.addEventListener("click", function () {
@@ -1703,6 +1881,9 @@
           }
           tr.querySelector(".celda-pct").textContent = log0.porcentaje + "%";
           tr.querySelector(".celda-precio").textContent = "$" + log0.precio_aplicado;
+          delete pctEditados[itemId];
+          pctResultadoPorItem[itemId] = resultadoDesdeLog(log0);
+          tr.querySelector(".celda-res").innerHTML = celdaResultadoPct(itemId);
           btn.textContent = "Guardado ✓";
           setTimeout(function () { btn.textContent = "Guardar"; btn.disabled = false; }, 1500);
         } else if (log0.estado === "REVISAR") {
@@ -1722,7 +1903,86 @@
       });
   }
 
-  els.btnCerrarPctAplicados.addEventListener("click", function () { els.modalPctAplicados.classList.add("oculto"); });
+  // ---------- % aplicados: aplicar el mismo % a todas y guardar en bloque ----------
+  btnRellenarPct.addEventListener("click", function () {
+    var pct = Number(elInputPctMasivo.value);
+    if (!pct || pct <= 0 || pct >= 100) { elInputPctMasivo.style.borderColor = "var(--err)"; return; }
+    elInputPctMasivo.style.borderColor = "";
+    var estado = pctAplicadosContexto ? promoItemsState[pctAplicadosContexto.promotionId] : null;
+    if (!estado || !estado.activos) return;
+    estado.activos.forEach(function (it) { pctEditados[it.id] = String(pct); });
+    renderTablaPctAplicados(estado.activos);
+    els.pctAplicadosEstado.textContent = "Rellenado con " + pct + "% en " + estado.activos.length + " publicaciones. Todavía no se guardó nada: apretá \"Guardar todas las modificadas\".";
+    els.pctAplicadosEstado.className = "estado";
+  });
+
+  btnGuardarTodosPct.addEventListener("click", function () {
+    if (pctMasivoEnCurso || !pctAplicadosContexto) return;
+    var ctx = pctAplicadosContexto;
+    var estado = promoItemsState[ctx.promotionId];
+    if (!estado || !estado.activos) return;
+
+    // Solo las filas cuyo % tipeado difiere del actual.
+    var invalidas = 0;
+    var items = [];
+    estado.activos.forEach(function (it) {
+      if (pctEditados[it.id] == null) return;
+      var nuevo = Number(pctEditados[it.id]);
+      if (!nuevo || nuevo <= 0 || nuevo >= 100) { invalidas++; return; }
+      if (Math.abs(nuevo - pctActualDe(it)) < 0.05) return;
+      items.push({ id: it.id, original_price: it.original_price, min_discounted_price: it.min_discounted_price, max_discounted_price: it.max_discounted_price, porcentaje_item: nuevo });
+    });
+    if (invalidas > 0) { els.pctAplicadosEstado.textContent = invalidas + " fila(s) con % inválido (tiene que ser entre 1 y 99). Corregilas antes de guardar."; els.pctAplicadosEstado.className = "estado err"; return; }
+    if (items.length === 0) { els.pctAplicadosEstado.textContent = "No hay cambios para guardar (ningún % distinto al actual)."; els.pctAplicadosEstado.className = "estado"; return; }
+    var aviso7d = avisoPreciosRecientes();
+    if (!confirm("Se va a cambiar el % de " + items.length + " publicación(es) en esta campaña. Esto cambia precios reales en ML." + (aviso7d ? "\n\n" + aviso7d : "") + "\n\n¿Continuar?")) return;
+
+    pctMasivoEnCurso = true;
+    btnGuardarTodosPct.disabled = true; btnRellenarPct.disabled = true;
+    var tandas = chunk(items, BATCH_SIZE), ti = 0, proc = 0, ok = 0, rev = 0, err = 0, t0 = Date.now();
+    els.pctAplicadosEstado.className = "estado";
+    els.pctAplicadosEstado.textContent = "Guardando 0/" + items.length + " (estimado " + fmtSeg(items.length * 0.5) + ")...";
+
+    function terminar(msgExtra, esError) {
+      pctMasivoEnCurso = false;
+      btnGuardarTodosPct.disabled = false; btnRellenarPct.disabled = false;
+      renderTablaPctAplicados(estado.activos);
+      els.pctAplicadosEstado.textContent = proc + "/" + items.length + " procesadas — " + ok + " OK, " + rev + " fuera de rango, " + err + " con error." +
+        (rev > 0 ? " Mirá la columna Resultado para el rango válido de cada una. " + TEXTO_REGLA_7D : "") + (msgExtra ? " " + msgExtra : "");
+      els.pctAplicadosEstado.className = (esError || err > 0) ? "estado err" : (rev > 0 ? "estado" : "estado ok");
+    }
+    function sig() {
+      if (ti >= tandas.length) { terminar(); return; }
+      var tanda = tandas[ti];
+      fetchConTimeout(URL_BULK, {
+        method: "POST",
+        headers: { Authorization: AUTH, "Content-Type": "application/json" },
+        body: JSON.stringify({ promotion_id: ctx.promotionId, promotion_type: ctx.promotionType, accion: "subir", items: tanda, porcentaje_base: tanda[0].porcentaje_item, excepciones: [] }),
+      }, TIMEOUT_TANDA_MS)
+        .then(function (res) {
+          if (!res.data || !res.data.ok) throw new Error((res.data && res.data.error) || "error en tanda");
+          (res.data.log || []).forEach(function (l) {
+            pctResultadoPorItem[l.item_id] = resultadoDesdeLog(l);
+            if (l.estado === "APLICADO") {
+              ok++;
+              delete pctEditados[l.item_id];
+              estado.activos = estado.activos.map(function (it) { return it.id === l.item_id ? Object.assign({}, it, { price: l.precio_aplicado }) : it; });
+            } else if (l.estado === "REVISAR") { rev++; } else { err++; }
+          });
+          proc += tanda.length; ti++;
+          var resta = (Date.now() - t0) / 1000 / ti * (tandas.length - ti);
+          els.pctAplicadosEstado.textContent = "Guardando " + proc + "/" + items.length + " (resta " + fmtSeg(resta) + ")...";
+          sig();
+        })
+        .catch(function (e) { terminar("Se cortó: " + e.message + ". Lo aplicado ya quedó; volvé a apretar \"Guardar\" para las que faltan.", true); });
+    }
+    sig();
+  });
+
+  els.btnCerrarPctAplicados.addEventListener("click", function () {
+    if (pctMasivoEnCurso && !confirm("Se está guardando en bloque. Si cerrás, sigue en segundo plano pero no vas a ver el resultado. ¿Cerrar igual?")) return;
+    els.modalPctAplicados.classList.add("oculto");
+  });
 
   /* ============================================================
      ACCIONES GLOBALES: Bajar TODAS / Subir TODAS (con % guardados)
@@ -1793,6 +2053,7 @@
   }
 
   els.btnBajarTodo.addEventListener("click", function () {
+    if (hayCorridaEnCurso()) return;
     var plan = recolectarPlanBajarTodo();
     var hayNoBajables = Object.keys(plan.noBajables).length > 0;
 
@@ -1874,6 +2135,7 @@
     var tandas = chunk(items, BATCH_SIZE);
     var ti = 0;
     var t0Bajar = Date.now();
+    iniciarCorrida();
 
     els.resultadoTitulo.textContent = "Bajando TODAS las promociones...";
     els.resultadoResumen.textContent = "Procesando 0/" + totalItems + " (estimado " + fmtSeg(totalItems * 0.5) + ")...";
@@ -1891,7 +2153,9 @@
         if (sinOfertas > 0) resumen += ", " + sinOfertas + " sin promos activas";
         els.resultadoResumen.textContent = resumen + ".";
         renderTablaLog(logGlobal, "bajar");
+        finCorrida();
         cargarEstadoSnapshot();
+        refrescarTrasRender = "todas";
         arrancarApp();
         return;
       }
@@ -1918,6 +2182,7 @@
           els.resultadoTitulo.textContent = "Se cortó a mitad de camino";
           els.resultadoResumen.textContent = procesados + "/" + totalItems + " procesadas antes del error (" + err.message + "). El respaldo de % (si había) ya está guardado — podés usar \"Subir TODAS (con los % guardados)\" cuando quieras para terminar.";
           renderTablaLog(logGlobal, "bajar");
+          finCorrida();
           cargarEstadoSnapshot();
         });
     }
@@ -1994,6 +2259,7 @@
   });
 
   els.btnSubirTodoGuardado.addEventListener("click", function () {
+    if (hayCorridaEnCurso()) return;
     els.btnSubirTodoGuardado.disabled = true;
     fetchConTimeout(URL_SNAPSHOT, { headers: { Authorization: AUTH } })
       .then(function (res) {
@@ -2009,7 +2275,8 @@
         });
 
         var listaGrupos = Object.keys(grupos).map(function (k) { return grupos[k]; });
-        if (!confirm("Se van a reaplicar " + filas.length + " publicaciones con el % que tenían guardado, en " + listaGrupos.length + " campaña(s). ¿Continuar?")) return;
+        var aviso7d = avisoPreciosRecientes();
+        if (!confirm("Se van a reaplicar " + filas.length + " publicaciones con el % que tenían guardado, en " + listaGrupos.length + " campaña(s)." + (aviso7d ? "\n\n" + aviso7d : "") + "\n\n¿Continuar?")) return;
 
         prepararYEjecutarRestore(listaGrupos);
       })
@@ -2039,6 +2306,8 @@
 
     Promise.all(promesas).then(function (preparados) {
       ejecutarSubidaGlobal(preparados.filter(function (p) { return p.items.length > 0; }));
+    }).catch(function (err) {
+      alert("No se pudieron consultar las campañas para reaplicar (" + err.message + "). No se tocó nada; reintentá.");
     });
   }
 
@@ -2055,6 +2324,7 @@
     var procesados = 0;
     var gi = 0;
     var t0Subir = Date.now();
+    iniciarCorrida();
 
     els.resultadoTitulo.textContent = "Subiendo TODAS (con % guardados)...";
     els.resultadoResumen.textContent = "Procesando 0/" + totalItems + " (estimado " + fmtSeg(totalItems * 0.5) + ")...";
@@ -2067,15 +2337,17 @@
     function siguienteGrupo() {
       if (gi >= grupos.length) {
         els.resultadoTitulo.textContent = "Resultado — Subir TODAS (con % guardados)";
-        els.resultadoResumen.textContent = totalItems + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error, " + revisar + " en revisión.";
+        els.resultadoResumen.textContent = totalItems + " publicaciones procesadas — " + exitosos + " OK, " + errores + " con error, " + revisar + " en revisión." + (revisar > 0 ? " " + TEXTO_REGLA_7D : "");
         renderTablaLog(logGlobal, "subir");
+        finCorrida();
 
         if (idsSnapshotExitosos.length > 0) {
           fetchConTimeout(URL_SNAPSHOT + "?ids=" + idsSnapshotExitosos.join(","), { method: "DELETE", headers: { Authorization: AUTH } })
             .catch(function () { /* si falla el borrado del respaldo no es grave, quedan filas viejas */ })
-            .finally(function () { cargarEstadoSnapshot(); arrancarApp(); });
+            .finally(function () { cargarEstadoSnapshot(); refrescarTrasRender = "todas"; arrancarApp(); });
         } else {
           cargarEstadoSnapshot();
+          refrescarTrasRender = "todas";
           arrancarApp();
         }
         return;
@@ -2113,6 +2385,7 @@
             els.resultadoTitulo.textContent = "Se cortó a mitad de camino";
             els.resultadoResumen.textContent = procesados + "/" + totalItems + " procesadas antes del error (" + err.message + ").";
             renderTablaLog(logGlobal, "subir");
+            finCorrida();
           });
       }
       siguienteTandaGrupo();
@@ -2463,7 +2736,8 @@
   document.getElementById("btnAplicarPrecios").addEventListener("click", function () {
     var ok = filasPreviewPrecios.filter(function (f) { return f.estado === "OK"; });
     if (ok.length === 0) return;
-    document.getElementById("aplicarPreciosResumen").textContent = "Vas a aplicar el precio nuevo a " + ok.length + " publicación(es) activa(s) en Mercado Libre.";
+    document.getElementById("aplicarPreciosResumen").textContent = "Vas a aplicar el precio nuevo a " + ok.length + " publicación(es) (activas y pausadas) en Mercado Libre. " +
+      "Ojo: si subís precios y después volvés a poner promos, ML puede tardar ~" + DIAS_REFERENCIA_ML + " días en considerar \"creíbles\" los descuentos chicos.";
     document.getElementById("inputConfirmarAplicarPrecios").value = "";
     document.getElementById("btnConfirmarAplicarPrecios").disabled = true;
     document.getElementById("modalAplicarPrecios").classList.remove("oculto");
@@ -2494,6 +2768,7 @@
       if (ti >= tandas.length) {
         filasResultadoPrecios = logAcum;
         filtroEstadoPrecios = null;
+        registrarPreciosAplicados(logAcum);
         est.textContent = "Listo — " + aplicados + " aplicados, " + errores + " con error. (Para volver a operar, previsualizá de nuevo.)";
         est.className = errores ? "estado err" : "estado ok";
         document.getElementById("btnPreviewPrecios").disabled = false;
@@ -2520,6 +2795,7 @@
         })
         .catch(function (err) {
           filasResultadoPrecios = logAcum;
+          registrarPreciosAplicados(logAcum);
           est.textContent = "Se cortó: " + err.message + " (" + proc + "/" + ok.length + " hechos). Podés previsualizar de nuevo para ver el estado real."; est.className = "estado err";
           document.getElementById("btnPreviewPrecios").disabled = false;
           renderResumenPrecios(); renderTablaPrecios();
