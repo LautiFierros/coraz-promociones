@@ -769,7 +769,7 @@
 
   // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
   var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
-  var APP_VERSION = "2026-09-27.1";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+  var APP_VERSION = "2026-09-27.2";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
 
   // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
   var ERRORES_RECIENTES = [];
@@ -1173,32 +1173,33 @@
     '</div>';
   }
 
-  // Filtros del listado de promos del panel de ML por tipo de campaña.
-  // Confirmado por Lauti:
-  //   SELLER_CAMPAIGN -> filtro por id: "seller_campaign_offer-{id en minúscula}"
-  //   DEAL             -> filtro por id: "meli_campaign_offer-{id en minúscula}"
-  //                       (el link real de ML suma tambien "official_event-..." y "qf_card-...",
-  //                       pero esos valores son internos de ML y no salen de nuestra API -- se omiten,
-  //                       el filtro por id solo debería alcanzar para llegar a esa campaña puntual)
-  //   LIGHTNING        -> filtro estático, no hay filtro por campaña individual
-  // Los demás tipos: sin filtro confirmado todavía, va al listado general.
+  // Link "Ver en ML" al listado de promos del panel de vendedores, filtrado por campaña.
+  // Formatos copiados de URLs reales del panel (Lauti, 2026-09-27). El filtro es una lista separada por "|":
+  //   [prefijo-{id en minúscula}] + sufijo fijo del tipo (la "tarjeta" del panel donde vive esa campaña).
+  //   SELLER_CAMPAIGN -> seller_campaign_offer-{id}
+  //   DEAL            -> meli_campaign_offer-{id} | qf_active | qf_card-events_t1 | lightning | dod | event | ml | seller
+  //                      (el panel suma además "official_event-<hash>", que la API de ML no devuelve: se omite)
+  //   SMART           -> meli_campaign_offer-{id} | qf_active | qf_card-always_on_meli | ml | seller  ("con aporte de Mercado Libre")
+  //   LIGHTNING       -> filtro fijo (no hay filtro por campaña individual)
+  // Tipo sin formato confirmado -> listado general. Para sumar uno: copiar la URL del panel y agregar la entrada acá.
+  var URL_PANEL_ML_PROMOS = "https://vendedores.mercadolibre.com.ar/publicaciones/listado/promos"; // cambiar si el clon es de otro país
   var FILTROS_ML_POR_TIPO = {
-    SELLER_CAMPAIGN: { modo: "id", prefijo: "seller_campaign_offer" },
-    DEAL: { modo: "id", prefijo: "meli_campaign_offer" },
-    LIGHTNING: { modo: "estatico", valor: "flash_deal|qf_active|qf_card-flash_deals|ml|seller" },
+    SELLER_CAMPAIGN: { prefijo: "seller_campaign_offer", sufijo: [] },
+    DEAL:            { prefijo: "meli_campaign_offer",   sufijo: ["qf_active", "qf_card-events_t1", "lightning", "dod", "event", "ml", "seller"] },
+    SMART:           { prefijo: "meli_campaign_offer",   sufijo: ["qf_active", "qf_card-always_on_meli", "ml", "seller"] },
+    LIGHTNING:       { fijo: ["flash_deal", "qf_active", "qf_card-flash_deals", "ml", "seller"] },
   };
 
   function urlVerEnML(promotionType, promotionId) {
-    var base = "https://vendedores.mercadolibre.com.ar/publicaciones/listado/promos?tab=promotions&page=1";
+    var armar = function (partes) {
+      // Mismo formato que el panel: filters primero y los "|" sin codificar.
+      return URL_PANEL_ML_PROMOS + "?filters=" + partes.map(encodeURIComponent).join("|") + "&page=1&tab=promotions";
+    };
     var cfg = FILTROS_ML_POR_TIPO[promotionType];
-    if (!cfg) return base;
-    if (cfg.modo === "id" && promotionId) {
-      return base + "&filters=" + encodeURIComponent(cfg.prefijo + "-" + promotionId.toLowerCase());
-    }
-    if (cfg.modo === "estatico") {
-      return base + "&filters=" + encodeURIComponent(cfg.valor);
-    }
-    return base;
+    if (!cfg) return URL_PANEL_ML_PROMOS + "?page=1&tab=promotions";
+    if (cfg.fijo) return armar(cfg.fijo);
+    if (!promotionId) return URL_PANEL_ML_PROMOS + "?page=1&tab=promotions";
+    return armar([cfg.prefijo + "-" + String(promotionId).toLowerCase()].concat(cfg.sufijo));
   }
 
   function renderInstancia(tipo, inst) {
