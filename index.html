@@ -769,7 +769,7 @@
 
   // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
   var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
-  var APP_VERSION = "2026-09-26.1";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+  var APP_VERSION = "2026-09-27.1";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
 
   // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
   var ERRORES_RECIENTES = [];
@@ -1149,9 +1149,7 @@
   }
 
   function renderHero(tipo, instancias) {
-    var esControlable = tipo.subir || tipo.bajar;
-    var badgeClase = esControlable ? "hero-badge controlable" : "hero-badge";
-    var badgeTexto = esControlable ? "Control disponible" : "Solo informativo";
+    var esControlable = tipo.subir || tipo.bajar; // define el borde ámbar de la card
 
     var instanciasHtml;
     if (instancias.length === 0) {
@@ -1169,7 +1167,6 @@
     return '<div class="hero ' + (esControlable ? "controlable" : "") + '">' +
       '<div class="hero-top">' +
         '<div class="hero-nombre">' + escapeHtml(tipo.nombre) + '</div>' +
-        '<div class="' + badgeClase + '">' + badgeTexto + '</div>' +
       '</div>' +
       '<div class="hero-explicacion">' + escapeHtml(tipo.explicacion) + '</div>' +
       instanciasHtml +
@@ -2914,7 +2911,7 @@
         return '"' + s.replace(/"/g, '""') + '"';
       }).join(","));
     });
-    var blob = new Blob(["﻿" + lineas.join("\n")], { type: "text/csv;charset=utf-8;" });
+    var blob = new Blob(["\uFEFF" + lineas.join("\n")], { type: "text/csv;charset=utf-8;" });
     var url = URL.createObjectURL(blob);
     var a = document.createElement("a");
     a.href = url;
