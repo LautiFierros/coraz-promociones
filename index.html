@@ -583,7 +583,7 @@
     <h3>De dónde salen los datos</h3>
     <p>Se consulta en vivo la API de Mercado Libre (recurso <code>seller-promotions</code>) usando el mismo token que ya usan el resto de las apps de CORAZ. No hay copia local de las promociones — lo que ves es el estado real en ML en el momento de cargar la página.</p>
     <h3>Los 12 tipos de promoción</h3>
-    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" (por card) está disponible para Campaña propia, Campaña tradicional, Co-financiada, Descuento por volumen y Descuento pre-negociado. Los tipos automáticos (co-participación automática, ajuste a competencia, liquidación, cupón) no tienen botón de bajar por card: se sacan desde el botón global "Bajar TODAS". El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo. Las cards traen sus candidatos/activos <b>solas una única vez al abrir la app</b>; después no se recargan solas — cada una se actualiza a mano con su botón "🔄 Ver candidatos/activos" (o todas juntas con "Actualizar candidatos/activos de todas"). Así la app no dispara consultas a ML todo el tiempo. Excepción: al terminar una tanda, se refresca sola la card que tocaste (o todas, si fue "Bajar TODAS" / "Subir TODAS"), para que veas los números ya actualizados.</p>
+    <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" (por card) está disponible en <b>todos</b> los tipos de promoción: saca las publicaciones solo de ESA campaña, sin tocar las demás promos. En Oferta del día y Relámpago, ML suele rechazar la baja una vez activas: la app lo intenta igual y te muestra el rechazo publicación por publicación. El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo. Las cards traen sus candidatos/activos <b>solas una única vez al abrir la app</b>; después no se recargan solas — cada una se actualiza a mano con su botón "🔄 Ver candidatos/activos" (o todas juntas con "Actualizar candidatos/activos de todas"). Así la app no dispara consultas a ML todo el tiempo. Excepción: al terminar una tanda, se refresca sola la card que tocaste (o todas, si fue "Bajar TODAS" / "Subir TODAS"), para que veas los números ya actualizados.</p>
     <h3>Subir a todas / Bajar de todas</h3>
     <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
     <h3>Bajar TODAS / Subir TODAS (para actualizar precios masivo)</h3>
@@ -769,7 +769,7 @@
 
   // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
   var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
-  var APP_VERSION = "2026-09-27.2";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+  var APP_VERSION = "2026-09-27.3";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
 
   // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
   var ERRORES_RECIENTES = [];
@@ -785,15 +785,15 @@
   var TIPOS = [
     { codigo: "SELLER_CAMPAIGN", nombre: "Campaña propia", explicacion: "La armás y controlás vos (ej: tu promo fija mensual). Descuento fijo o flexible que vos definís.", subir: true, bajar: true },
     { codigo: "DEAL", nombre: "Campaña tradicional (Deal)", explicacion: "ML te invita, vos elegís el precio final dentro del rango permitido.", subir: true, bajar: true },
-    { codigo: "DOD", nombre: "Oferta del día", explicacion: "ML sugiere el precio, vos definís el tuyo dentro del rango. Una vez activada no se puede sacar, solo pausar la publicación.", subir: true, bajar: false },
+    { codigo: "DOD", nombre: "Oferta del día", explicacion: "ML sugiere el precio, vos definís el tuyo dentro del rango. Ojo: una vez activa, ML suele no dejar sacarla (si la rechaza, lo ves en el detalle).", subir: true, bajar: true },
     { codigo: "MARKETPLACE_CAMPAIGN", nombre: "Campaña co-financiada", explicacion: "ML te invita y paga parte del descuento — el precio lo calcula ML solo, vos solo te sumás.", subir: true, bajar: true },
-    { codigo: "SMART", nombre: "Co-participación automática", explicacion: "Parecida a la co-financiada, pero ML elige los candidatos solo. Vos igual tenés que sumarte a cada item.", subir: true, bajar: false },
+    { codigo: "SMART", nombre: "Co-participación automática", explicacion: "Parecida a la co-financiada, pero ML elige los candidatos solo. Vos igual tenés que sumarte a cada item.", subir: true, bajar: true },
     { codigo: "VOLUME", nombre: "Descuento por volumen", explicacion: "Tipo 3x2. ML te invita y calcula el descuento, vos adherís los items candidatos.", subir: true, bajar: true },
     { codigo: "PRE_NEGOTIATED", nombre: "Descuento pre-negociado", explicacion: "Acuerdo puntual por item entre vos y ML. Solo hace falta aceptar la invitación.", subir: true, bajar: true },
-    { codigo: "UNHEALTHY_STOCK", nombre: "Liquidación de stock parado", explicacion: "ML te invita sobre publicaciones con baja rotación y calcula el descuento.", subir: true, bajar: false },
-    { codigo: "SELLER_COUPON_CAMPAIGN", nombre: "Cupón propio", explicacion: "Cupón que armás vos, se aplica en el checkout — no cambia el precio de lista.", subir: true, bajar: false },
-    { codigo: "PRICE_MATCHING", nombre: "Ajuste a la competencia", explicacion: "ML ajusta el precio automáticamente para igualar a la competencia.", subir: true, bajar: false },
-    { codigo: "LIGHTNING", nombre: "Oferta relámpago", explicacion: "Oferta corta con stock reservado. Mecanismo de alta todavía no confirmado del todo — por ahora solo informativo.", subir: false, bajar: false },
+    { codigo: "UNHEALTHY_STOCK", nombre: "Liquidación de stock parado", explicacion: "ML te invita sobre publicaciones con baja rotación y calcula el descuento.", subir: true, bajar: true },
+    { codigo: "SELLER_COUPON_CAMPAIGN", nombre: "Cupón propio", explicacion: "Cupón que armás vos, se aplica en el checkout — no cambia el precio de lista.", subir: true, bajar: true },
+    { codigo: "PRICE_MATCHING", nombre: "Ajuste a la competencia", explicacion: "ML ajusta el precio automáticamente para igualar a la competencia.", subir: true, bajar: true },
+    { codigo: "LIGHTNING", nombre: "Oferta relámpago", explicacion: "Oferta corta con stock reservado. Desde acá se puede ver y bajar (el alta todavía no está soportada). Ojo: ML suele no dejar sacar una relámpago activa.", subir: false, bajar: true },
     { codigo: "PRICE_DISCOUNT", nombre: "Descuento simple", explicacion: "Descuento puntual sobre una publicación, no es una campaña con candidatos — necesita otra pantalla, no bulk por tipo.", subir: false, bajar: false },
   ];
 
@@ -809,6 +809,8 @@
 
   // Tipos donde el vendedor define el precio (los otros: ML lo calcula solo, no hace falta preguntar %).
   var TIPOS_NECESITAN_PRECIO = ["DEAL", "SELLER_CAMPAIGN", "DOD"];
+  // Tipos donde ML suele rechazar el "bajar" una vez activos: se permite intentar, con aviso previo.
+  var TIPOS_BAJA_RESTRINGIDA_ML = ["DOD", "LIGHTNING"];
 
   if (typeof window.supabase === "undefined") {
     document.getElementById("cdnFail").classList.add("show");
@@ -1392,6 +1394,9 @@
       texto += ". Esto cambia precios reales visibles en ML.";
     } else {
       texto = 'Va a sacar de "' + nombre + '" a cada publicación que esté activa ahí. No se puede deshacer con un botón — habría que volver a aplicarlas a mano.';
+      if (TIPOS_BAJA_RESTRINGIDA_ML.indexOf(promotionType) !== -1) {
+        texto += " Aviso: Mercado Libre suele no permitir sacar este tipo de oferta una vez activa; si la rechaza, lo vas a ver publicación por publicación en el detalle (no se toca ninguna otra promo).";
+      }
     }
     els.confirmarTexto.textContent = texto;
     els.modalConfirmar.classList.remove("oculto");
