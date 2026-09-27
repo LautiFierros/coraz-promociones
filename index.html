@@ -315,6 +315,18 @@
     /* ---------- % aplicados: aplicar a todas ---------- */
     .pct-masivo{display:flex;gap:8px;align-items:center;flex-wrap:wrap;background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:8px 10px;margin:8px 0;font-size:0.82rem;}
     .pct-frescura{display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:0.75rem;color:var(--text-dim);margin:-4px 0 6px;}
+    /* ---------- Seleccionar candidatas por % máximo (tipos donde ML fija el precio) ---------- */
+    .sel-ayuda{font-size:0.8rem;color:var(--text-dim);background:var(--panel-2);border:1px solid var(--panel-border);border-radius:8px;padding:10px 12px;margin:0 0 10px;}
+    .sel-barra{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:0 0 10px;font-size:0.8rem;}
+    .sel-barra label{margin:0;}
+    .sel-barra input[type=number]{width:80px;}
+    .sel-barra select{max-width:260px;}
+    #tablaSel tr.sel-fuera td.sel-pct-base{color:var(--err);font-weight:700;}
+    #tablaSel tr.sel-dentro td.sel-pct-base{color:var(--ok);font-weight:700;}
+    #tablaSel tr.sel-marcada{background:var(--amber-soft);}
+    #tablaSel td.num,#tablaSel th.num{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+    #tablaSel th[data-sel-sort]{cursor:pointer;}
+    #tablaSel th[data-sel-sort]:hover{color:var(--amber);}
     .aviso-7d{font-size:0.78rem;color:var(--amber);background:var(--amber-soft);border:1px solid var(--amber-dim);border-radius:8px;padding:10px 12px;margin:0 0 12px;}
   </style>
 
@@ -585,7 +597,7 @@
     <h3>Los 12 tipos de promoción</h3>
     <p>Cada card muestra un tipo. Los que tienen borde ámbar y botones los controlás vos: podés subir todas las publicaciones candidatas de una campaña con un clic. "Bajar de todas" (por card) está disponible en <b>todos</b> los tipos de promoción: saca las publicaciones solo de ESA campaña, sin tocar las demás promos. En Oferta del día y Relámpago, ML suele rechazar la baja una vez activas: la app lo intenta igual y te muestra el rechazo publicación por publicación. El resto son invitaciones de ML — se muestran para que sepas qué tenés corriendo. Las cards traen sus candidatos/activos <b>solas una única vez al abrir la app</b>; después no se recargan solas — cada una se actualiza a mano con su botón "🔄 Ver candidatos/activos" (o todas juntas con "Actualizar candidatos/activos de todas"). Así la app no dispara consultas a ML todo el tiempo. Excepción: al terminar una tanda, se refresca sola la card que tocaste (o todas, si fue "Bajar TODAS" / "Subir TODAS"), para que veas los números ya actualizados.</p>
     <h3>Subir a todas / Bajar de todas</h3>
-    <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual y les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
+    <p>"Subir a todas" busca las publicaciones candidatas de esa campaña puntual. En las campañas donde <b>vos definís el precio</b> (Deal, Campaña propia, Oferta del día) les aplica el precio calculado con el % que definas en el momento (ver siguiente punto). En las campañas donde <b>el precio lo fija Mercado Libre</b> (co-participación como "Potencia tus ventas", co-financiada, volumen, etc.) se abre una lista con el % que ML va a aplicar en cada publicación (descuento total, cuánto pone ML y cuánto ponés vos): escribís tu <b>% máximo</b>, elegís si compararlo contra el descuento total o contra lo que ponés vos, tocás "Seleccionar hasta ese %" y se suben <b>solo las tildadas</b> (podés tildar o destildar a mano). "Bajar de todas" saca las que están activas. Ambas acciones muestran un detalle publicación por publicación al terminar, con opción de reintentar si algo falló.</p>
     <h3>Bajar TODAS / Subir TODAS (para actualizar precios masivo)</h3>
     <p>El botón "⬇️ Bajar TODAS las promociones" es para el flujo de actualización masiva de precios: saca cada publicación de <b>todas</b> sus promociones de una sola llamada (usa el borrado en bloque por publicación de ML). Antes de bajar nada, guarda el % que tenían las campañas reaplicables (Deal y Campaña propia) para poder volver a subirlas igual. El modal de confirmación te separa en tres grupos qué va a pasar: las que <b>se reaplican con "Subir TODAS"</b> (Deal / Campaña propia), las que <b>se bajan pero volvés a sumar a mano</b> (co-financiada, volumen, etc. — ahí el precio lo fija ML), y las que <b>no se pueden bajar desde acá</b> (Oferta del día y Relámpago, que ML no deja sacar por API — se gestionan desde el panel de ML). El flujo típico es: Bajar TODAS → actualizar precios en ML → "⬆️ Subir TODAS (con los % guardados)". Mientras haya respaldo pendiente se muestra cuántas publicaciones son y de qué fecha es; si esa precarga ya no te sirve (por ejemplo, decidiste no volver a subirlas), el botón "🗑️ Descartar respaldo" la borra — no toca nada en Mercado Libre, solo limpia la cola. Para que junte bien lo activo, primero apretá "Actualizar métricas" (o "Ver candidatos/activos" en las cards).</p>
     <h3>Pestaña "Actualizar precios"</h3>
@@ -746,6 +758,52 @@
   </div>
 </div>
 
+<!-- ============================================================
+     MODAL: Subir a todas — elegir candidatas por % máximo
+     (tipos donde ML fija el precio: co-participación, co-financiada, volumen, etc.)
+     ============================================================ -->
+<div id="modalSeleccionSubir" class="modal-fondo oculto">
+  <div class="modal-caja" style="max-width:860px;">
+    <h2>Sumar publicaciones a "<span id="selNombreCampana"></span>"</h2>
+    <p class="sel-ayuda">En este tipo de promo <b>el precio lo fija Mercado Libre</b>: no se puede elegir el %. Lo que sí podés es <b>elegir qué publicaciones sumar</b>. Poné tu % máximo, tocá "Seleccionar hasta ese %" y se van a subir <b>solo las tildadas</b>. Podés tildar o destildar a mano.</p>
+    <div class="sel-barra">
+      <label for="selPctMax">Mi % máximo</label>
+      <input type="number" id="selPctMax" min="0" max="99" step="0.1" inputmode="decimal" placeholder="ej. 8">
+      <label for="selBase">comparado contra</label>
+      <select id="selBase">
+        <option value="total">Descuento total (el que ve el comprador)</option>
+        <option value="vendedor">Lo que ponés vos</option>
+      </select>
+      <button class="chico" id="btnSelHasta" type="button">Seleccionar hasta ese %</button>
+      <button class="chico secondary" id="btnSelTodas" type="button">Todas</button>
+      <button class="chico secondary" id="btnSelNinguna" type="button">Ninguna</button>
+    </div>
+    <div class="resumen-precios" id="selResumen"></div>
+    <div id="selEstado" class="estado"></div>
+    <div style="overflow:auto;max-height:52vh;">
+      <table class="log" id="tablaSel">
+        <thead>
+          <tr>
+            <th><input type="checkbox" id="selCheckTodas" title="Tildar / destildar todas las visibles"></th>
+            <th data-sel-sort="id">MLA</th>
+            <th data-sel-sort="sku">SKU</th>
+            <th class="num" data-sel-sort="original_price">Precio lista</th>
+            <th class="num" data-sel-sort="price">Precio final</th>
+            <th class="num" data-sel-sort="total">Desc. total</th>
+            <th class="num" data-sel-sort="ml">Pone ML</th>
+            <th class="num" data-sel-sort="vendedor">Ponés vos</th>
+          </tr>
+        </thead>
+        <tbody id="tablaSelBody"></tbody>
+      </table>
+    </div>
+    <div class="modal-cerrar" style="justify-content:space-between;">
+      <button class="secondary" id="btnSelCancelar" type="button">Cancelar</button>
+      <button id="btnSelConfirmar" type="button" disabled>Subir seleccionadas (0)</button>
+    </div>
+  </div>
+</div>
+
 <!-- Barrita flotante: corrida en segundo plano (clic = volver al detalle) -->
 <div id="pillCorrida" class="pill-corrida oculto" role="button" tabindex="0" title="Tocá para ver el detalle">
   <span class="pill-spinner"></span><span id="pillCorridaTexto"></span>
@@ -769,7 +827,7 @@
 
   // --- Tickets (módulo transversal: mismo backend para todas las apps) ---
   var TICKETS_APP_ID = "coraz-promociones"; // identifica a ESTA app en el embudo común (cambiar al clonar/replicar)
-  var APP_VERSION = "2026-09-27.3";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
+  var APP_VERSION = "2026-09-27.5";           // se adjunta a cada ticket; actualizar al deployar una versión nueva
 
   // Captura de errores recientes (se adjuntan como contexto técnico a los tickets). Buffer de 5.
   var ERRORES_RECIENTES = [];
@@ -966,14 +1024,22 @@
   els.gatePass.addEventListener("keydown", function (e) { if (e.key === "Enter") hacerLogin(); });
   els.btnLogout.addEventListener("click", function () { sb.auth.signOut(); });
 
+  // Supabase vuelve a emitir eventos de sesión (SIGNED_IN / TOKEN_REFRESHED) cada vez que la pestaña
+  // recupera el foco o renueva el token. Antes cada evento llamaba a arrancarApp() y recargaba todas las
+  // promociones al volver a la pestaña. Ahora: la app arranca UNA sola vez por login; los eventos
+  // siguientes solo actualizan el token (AUTH) en memoria, sin tocar lo que estás viendo.
+  var appArrancada = false;
   sb.auth.onAuthStateChange(function (_event, session) {
     if (session) {
       AUTH = "Bearer " + session.access_token;
       USUARIO_EMAIL = (session.user && session.user.email) || null;
+      if (appArrancada) return; // volver a la pestaña / renovar token: no se recarga nada
+      appArrancada = true;
       els.gate.classList.add("oculto");
       els.app.classList.remove("oculto");
       arrancarApp();
     } else {
+      appArrancada = false;
       AUTH = null;
       els.app.classList.add("oculto");
       els.gate.classList.remove("oculto");
@@ -1119,6 +1185,8 @@
         var nombre = btn.getAttribute("data-nombre");
         if (accion === "subir" && TIPOS_NECESITAN_PRECIO.indexOf(promotionType) !== -1) {
           abrirModalPorcentaje(promotionId, promotionType, nombre);
+        } else if (accion === "subir") {
+          abrirModalSeleccionSubir(promotionId, promotionType, nombre); // ML fija el precio: elegís cuáles
         } else {
           abrirConfirmacion(promotionId, promotionType, accion, nombre);
         }
@@ -1736,6 +1804,177 @@
   window.addEventListener("beforeunload", function (e) {
     if (!corridaEnCurso) return;
     e.preventDefault(); e.returnValue = ""; // el navegador pregunta antes de cerrar/recargar la pestaña
+  });
+
+  /* ============================================================
+     MODAL: Subir a todas — elegir candidatas por % máximo
+     Para los tipos donde ML fija el precio (no están en TIPOS_NECESITAN_PRECIO). El % no se elige:
+     se muestra el que ML va a aplicar y se tildan solo las publicaciones que no superan tu máximo.
+     Datos: items_candidatos de ml-promos-bulk (v17+: price, meli_percentage, seller_percentage, sku).
+     ============================================================ */
+  var LS_SEL_PCT_MAX = TICKETS_APP_ID + ":sel_pct_max"; // último % máximo usado (solo este navegador)
+  var selContexto = null;        // { promotionId, promotionType, nombre }
+  var selFilas = [];             // candidatas con los % calculados
+  var selMarcadas = {};          // item_id -> true
+  var selOrden = { campo: "total", asc: true };
+
+  function redondear1(n) { return Math.round(n * 10) / 10; }
+  // Arma la fila con los tres % (total, ML, vendedor). Si falta alguno se deduce de los otros cuando se puede.
+  function filaSeleccion(it) {
+    var orig = Number(it.original_price) || 0;
+    var price = it.price != null ? Number(it.price) : null;
+    var ml = it.meli_percentage != null ? Number(it.meli_percentage) : null;
+    var vend = it.seller_percentage != null ? Number(it.seller_percentage) : null;
+    var total = (price != null && orig > 0) ? (1 - price / orig) * 100 : (ml != null && vend != null ? ml + vend : null);
+    if (vend == null && total != null && ml != null) vend = total - ml;
+    return {
+      id: it.id, sku: it.sku || "", original_price: orig, price: price,
+      total: total != null ? redondear1(total) : null,
+      ml: ml != null ? redondear1(ml) : null,
+      vendedor: vend != null ? redondear1(vend) : null,
+      item: it,
+    };
+  }
+  function selValorBase(f) { return document.getElementById("selBase").value === "vendedor" ? f.vendedor : f.total; }
+  function selPctMax() {
+    var v = parseFloat(String(document.getElementById("selPctMax").value).replace(",", "."));
+    return isFinite(v) && v >= 0 && v < 100 ? v : null;
+  }
+  function fmtPct(v) { return v == null ? "—" : v + "%"; }
+
+  function abrirModalSeleccionSubir(promotionId, promotionType, nombre, yaRefrescado) {
+    if (hayCorridaEnCurso()) return;
+    selContexto = { promotionId: promotionId, promotionType: promotionType, nombre: nombre };
+    document.getElementById("selNombreCampana").textContent = nombre;
+    var estadoEl = document.getElementById("selEstado");
+    var previo = promoItemsState[promotionId];
+    document.getElementById("modalSeleccionSubir").classList.remove("oculto");
+    // Datos viejos (o sin los % de v17) => se releen de ML antes de mostrar.
+    var sinPct = previo && previo.candidatos && previo.candidatos.length && previo.candidatos[0].price === undefined;
+    if (!yaRefrescado && (!previo || !previo.cargadoAt || sinPct || Date.now() - previo.cargadoAt > MAX_EDAD_DATOS_CAMPANA_MS)) {
+      selFilas = []; selMarcadas = {}; renderSeleccion();
+      estadoEl.textContent = "Leyendo de Mercado Libre las candidatas y el % de cada una…"; estadoEl.className = "estado";
+      refrescarEstadoCampana(promotionId, promotionType)
+        .then(function () { abrirModalSeleccionSubir(promotionId, promotionType, nombre, true); })
+        .catch(function (err) { estadoEl.textContent = "No se pudo leer la campaña de ML: " + err.message + ". Cerrá y reintentá."; estadoEl.className = "estado err"; });
+      return;
+    }
+    var estado = promoItemsState[promotionId];
+    selFilas = ((estado && estado.candidatos) || []).map(filaSeleccion);
+    selMarcadas = {};
+    selOrden = { campo: "total", asc: true };
+    try { var guardado = localStorage.getItem(LS_SEL_PCT_MAX); if (guardado) document.getElementById("selPctMax").value = guardado; } catch (e) { /* sin storage */ }
+    estadoEl.textContent = selFilas.length === 0 ? "No hay publicaciones candidatas en esta campaña." :
+      "Poné tu % máximo y tocá \"Seleccionar hasta ese %\". Nada se sube hasta que confirmes.";
+    estadoEl.className = "estado";
+    renderSeleccion();
+  }
+
+  function renderSeleccion() {
+    var max = selPctMax();
+    var campo = selOrden.campo, asc = selOrden.asc;
+    var filas = selFilas.slice().sort(function (a, b) {
+      var va = a[campo], vb = b[campo];
+      if (va == null && vb == null) return 0;
+      if (va == null) return 1; if (vb == null) return -1; // sin dato, siempre al final
+      if (typeof va === "string") { va = va.toLowerCase(); vb = String(vb).toLowerCase(); }
+      return va < vb ? (asc ? -1 : 1) : va > vb ? (asc ? 1 : -1) : 0;
+    });
+    var baseEsVendedor = document.getElementById("selBase").value === "vendedor";
+    document.getElementById("tablaSelBody").innerHTML = filas.map(function (f) {
+      var base = selValorBase(f);
+      var cls = [];
+      if (selMarcadas[f.id]) cls.push("sel-marcada");
+      if (max != null && base != null) cls.push(base <= max ? "sel-dentro" : "sel-fuera");
+      return "<tr class='" + cls.join(" ") + "' data-sel-id='" + escapeHtml(f.id) + "'>" +
+        "<td><input type='checkbox' class='sel-check' " + (selMarcadas[f.id] ? "checked" : "") + "></td>" +
+        "<td>" + escapeHtml(f.id) + "</td><td>" + escapeHtml(f.sku || "—") + "</td>" +
+        "<td class='num'>" + fmtPrecio(f.original_price) + "</td>" +
+        "<td class='num'>" + fmtPrecio(f.price) + "</td>" +
+        "<td class='num" + (!baseEsVendedor ? " sel-pct-base" : "") + "'>" + fmtPct(f.total) + "</td>" +
+        "<td class='num'>" + fmtPct(f.ml) + "</td>" +
+        "<td class='num" + (baseEsVendedor ? " sel-pct-base" : "") + "'>" + fmtPct(f.vendedor) + "</td></tr>";
+    }).join("");
+    document.querySelectorAll("#tablaSel th[data-sel-sort]").forEach(function (th) {
+      var activo = th.getAttribute("data-sel-sort") === campo;
+      th.style.color = activo ? "var(--amber)" : "";
+      th.setAttribute("title", "Ordenar" + (activo ? (asc ? " (ascendente)" : " (descendente)") : ""));
+    });
+    renderResumenSeleccion();
+  }
+
+  function renderResumenSeleccion() {
+    var marcadas = selFilas.filter(function (f) { return selMarcadas[f.id]; });
+    var prom = function (arr, k) { var v = arr.filter(function (f) { return f[k] != null; }); return v.length ? redondear1(v.reduce(function (s, f) { return s + f[k]; }, 0) / v.length) : null; };
+    var sinDato = selFilas.filter(function (f) { return selValorBase(f) == null; }).length;
+    var max = selPctMax();
+    var sobre = max == null ? null : selFilas.filter(function (f) { var b = selValorBase(f); return b != null && b > max; }).length;
+    function kpi(help, label, valor) { return '<div class="kpi">' + kpiHelp(help) + " " + label + " <b>" + valor + "</b></div>"; }
+    document.getElementById("selResumen").innerHTML =
+      kpi("Publicaciones tildadas que se van a sumar a la campaña, sobre el total de candidatas que ML te ofrece. Solo se suben las tildadas.", "Seleccionadas", marcadas.length + " de " + selFilas.length) +
+      kpi("Promedio del descuento total (precio final vs. precio de lista) de las publicaciones tildadas. Es el % que ve el comprador. Sale del precio que informa ML para cada candidata.", "Desc. total prom.", fmtPct(prom(marcadas, "total"))) +
+      kpi("Promedio de la parte del descuento que ponés vos (seller_percentage que informa ML) en las tildadas. El resto lo pone Mercado Libre.", "Ponés vos prom.", fmtPct(prom(marcadas, "vendedor"))) +
+      (sobre != null ? kpi("Candidatas cuyo % (según lo que elegiste comparar) supera tu % máximo. Quedan sin tildar al usar \"Seleccionar hasta ese %\".", "Sobre tu máximo", sobre) : "") +
+      (sinDato ? kpi("Candidatas para las que ML no informó el %. No se tildan solas con el filtro; si querés sumarlas, tildalas a mano.", "Sin dato de %", sinDato) : "");
+    var btn = document.getElementById("btnSelConfirmar");
+    btn.textContent = "Subir seleccionadas (" + marcadas.length + ")";
+    btn.disabled = marcadas.length === 0;
+    var visibles = document.querySelectorAll("#tablaSelBody .sel-check");
+    var todas = document.getElementById("selCheckTodas");
+    todas.checked = visibles.length > 0 && marcadas.length === selFilas.length;
+    todas.indeterminate = marcadas.length > 0 && marcadas.length < selFilas.length;
+  }
+
+  document.getElementById("tablaSelBody").addEventListener("change", function (e) {
+    if (!e.target.classList.contains("sel-check")) return;
+    var id = e.target.closest("tr").getAttribute("data-sel-id");
+    if (e.target.checked) selMarcadas[id] = true; else delete selMarcadas[id];
+    e.target.closest("tr").classList.toggle("sel-marcada", e.target.checked);
+    renderResumenSeleccion();
+  });
+  document.getElementById("selCheckTodas").addEventListener("change", function () {
+    var marcar = this.checked;
+    selMarcadas = {};
+    if (marcar) selFilas.forEach(function (f) { selMarcadas[f.id] = true; });
+    renderSeleccion();
+  });
+  document.querySelectorAll("#tablaSel th[data-sel-sort]").forEach(function (th) {
+    th.addEventListener("click", function () {
+      var c = th.getAttribute("data-sel-sort");
+      selOrden = selOrden.campo === c ? { campo: c, asc: !selOrden.asc } : { campo: c, asc: true };
+      renderSeleccion();
+    });
+  });
+  function seleccionarHastaMax() {
+    var max = selPctMax();
+    var estadoEl = document.getElementById("selEstado");
+    if (max == null) { estadoEl.textContent = "Poné un % máximo válido (entre 0 y 99)."; estadoEl.className = "estado err"; return; }
+    try { localStorage.setItem(LS_SEL_PCT_MAX, String(max)); } catch (e) { /* sin storage */ }
+    selMarcadas = {};
+    selFilas.forEach(function (f) { var b = selValorBase(f); if (b != null && b <= max) selMarcadas[f.id] = true; });
+    var n = Object.keys(selMarcadas).length;
+    estadoEl.textContent = n + " publicación(es) quedan en " + max + "% o menos (" + (document.getElementById("selBase").value === "vendedor" ? "lo que ponés vos" : "descuento total") + "). Revisalas y confirmá.";
+    estadoEl.className = "estado ok";
+    renderSeleccion();
+  }
+  document.getElementById("btnSelHasta").addEventListener("click", seleccionarHastaMax);
+  document.getElementById("selPctMax").addEventListener("keydown", function (e) { if (e.key === "Enter") { e.preventDefault(); seleccionarHastaMax(); } });
+  document.getElementById("selPctMax").addEventListener("input", renderSeleccion); // recolorea sin tildar
+  document.getElementById("selBase").addEventListener("change", renderSeleccion);
+  document.getElementById("btnSelTodas").addEventListener("click", function () { selMarcadas = {}; selFilas.forEach(function (f) { selMarcadas[f.id] = true; }); renderSeleccion(); });
+  document.getElementById("btnSelNinguna").addEventListener("click", function () { selMarcadas = {}; renderSeleccion(); });
+  document.getElementById("btnSelCancelar").addEventListener("click", function () { selContexto = null; document.getElementById("modalSeleccionSubir").classList.add("oculto"); });
+  document.getElementById("btnSelConfirmar").addEventListener("click", function () {
+    if (!selContexto || hayCorridaEnCurso()) return;
+    var items = selFilas.filter(function (f) { return selMarcadas[f.id]; }).map(function (f) { return f.item; });
+    if (items.length === 0) return;
+    var max = selPctMax();
+    if (!confirm("Vas a sumar " + items.length + " publicación(es) a \"" + selContexto.nombre + "\" con el precio que fija Mercado Libre" +
+      (max != null ? " (tu máximo: " + max + "%)" : "") + ". Esto cambia precios reales visibles en ML.\n\n¿Continuar?")) return;
+    var a = { promotionId: selContexto.promotionId, promotionType: selContexto.promotionType, accion: "subir", pctConfig: null };
+    document.getElementById("modalSeleccionSubir").classList.add("oculto");
+    selContexto = null;
+    ejecutarEnTandas(a, items, {});
   });
 
   /* ============================================================
